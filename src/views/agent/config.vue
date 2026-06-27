@@ -1,0 +1,2 @@
+<template><div class="app-container"><a-card><template #title>Dify Chatflow 配置</template><a-alert type="info" :closable="false" title="Agent 从系统参数读取配置"/><a-descriptions :column="1" border class="mt20"><a-descriptions-item label="API 地址">agent.dify.api_base_url</a-descriptions-item><a-descriptions-item label="API Key">agent.dify.api_key</a-descriptions-item></a-descriptions><p class="tip">请在“系统管理 → 参数设置”中维护。API Key 只保存在后端，不会发送到浏览器。</p></a-card></div></template>
+<style scoped>.tip{color:#84909f;margin-top:18px}</style>
