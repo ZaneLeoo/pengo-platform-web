@@ -30,7 +30,7 @@
       </a-form-item>
       <a-divider>用量与发料</a-divider>
       <a-form-item label="用量" name="componentQty">
-        <a-input-number v-model:value="form.componentQty" :min="0" :precision="3" style="width:100%" />
+        <a-input-number v-model:value="form.componentQty" :min="0.001" :precision="3" style="width:100%" />
       </a-form-item>
       <a-form-item label="发料方式" name="supplyType">
         <a-select v-model:value="form.supplyType" :options="supplyTypeOptions" placeholder="请选择发料方式" />
@@ -57,6 +57,7 @@ import { message } from 'ant-design-vue'
 import { getBomItem, addBomItem, updateBomItem } from '@/api/mes/base'
 import { listMaterial, getMaterial } from '@/api/mes/base'
 import { resolveBomItemMaterial } from './bomItemMaterialResolve.js'
+import { validatePositiveNumber } from './bomItemValidation.js'
 
 const emit = defineEmits(['refresh'])
 const props = defineProps({ bomVersionId: { type: Number, required: true }, parentItemCode: { type: String, default: null } })
@@ -81,7 +82,10 @@ const supplyTypeOptions = [
 const rules = {
   lineNo: [{ required: true, message: '请输入行号', trigger: 'blur' }],
   componentItemId: [{ required: true, message: '请选择子件物料', trigger: 'change' }],
-  componentQty: [{ required: true, message: '请输入用量', trigger: 'blur' }],
+  componentQty: [
+    { required: true, message: '请输入用量', trigger: 'blur' },
+    { validator: validatePositiveNumber('用量必须大于0'), trigger: 'change' }
+  ],
   supplyType: [{ required: true, message: '请选择发料方式', trigger: 'change' }],
 }
 
