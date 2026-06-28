@@ -21,12 +21,18 @@ export function listBomMaster(query) { return request({ url: '/mes/base/bomMaste
 export function getBomMaster(id) { return request({ url: '/mes/base/bomMaster/' + id, method: 'get' }) }
 export function addBomMaster(data) { return request({ url: '/mes/base/bomMaster', method: 'post', data }) }
 export function updateBomMaster(data) { return request({ url: '/mes/base/bomMaster', method: 'put', data }) }
-export function delBomMaster(id) { return request({ url: '/mes/base/bomMaster/' + id, method: 'delete' }) }
+export function delBomMaster(ids) { return request({ url: '/mes/base/bomMaster/' + ids, method: 'delete' }) }
 export function listBomVersion(query) { return request({ url: '/mes/base/bomVersion/list', method: 'get', params: query }) }
+export function getBomVersion(id) { return request({ url: '/mes/base/bomVersion/' + id, method: 'get' }) }
 export function addBomVersion(data) { return request({ url: '/mes/base/bomVersion', method: 'post', data }) }
 export function updateBomVersion(data) { return request({ url: '/mes/base/bomVersion', method: 'put', data }) }
-export function delBomVersion(id) { return request({ url: '/mes/base/bomVersion/' + id, method: 'delete' }) }
+export function delBomVersion(ids) { return request({ url: '/mes/base/bomVersion/' + ids, method: 'delete' }) }
+export function copyBomVersion(data) { return request({ url: '/mes/base/bomVersion/copy', method: 'post', data }) }
+export function checkBomVersion(id) { return request({ url: '/mes/base/bomVersion/' + id + '/check', method: 'get' }) }
 export function listBomItem(query) { return request({ url: '/mes/base/bomItem/list', method: 'get', params: query }) }
+export function listBomItemChildren(bomVersionId, parentItemCode) { return request({ url: '/mes/base/bomItem/children', method: 'get', params: { bomVersionId, parentItemCode } }) }
+export function listBomItemByComponent(componentItemCode) { return request({ url: '/mes/base/bomItem/childrenByComponent', method: 'get', params: { componentItemCode } }) }
+export function getBomItem(id) { return request({ url: '/mes/base/bomItem/' + id, method: 'get' }) }
 export function addBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'post', data }) }
 export function updateBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'put', data }) }
-export function delBomItem(id) { return request({ url: '/mes/base/bomItem/' + id, method: 'delete' }) }
+export function delBomItem(ids) { return request({ url: '/mes/base/bomItem/' + ids, method: 'delete' }) }
