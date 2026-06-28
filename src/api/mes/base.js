@@ -29,6 +29,7 @@ export function updateBomVersion(data) { return request({ url: '/mes/base/bomVer
 export function delBomVersion(ids) { return request({ url: '/mes/base/bomVersion/' + ids, method: 'delete' }) }
 export function copyBomVersion(data) { return request({ url: '/mes/base/bomVersion/copy', method: 'post', data }) }
 export function checkBomVersion(id) { return request({ url: '/mes/base/bomVersion/' + id + '/check', method: 'get' }) }
+export function compareBomVersion(query) { return request({ url: '/mes/base/bomVersion/compare', method: 'get', params: query }) }
 export function listBomItem(query) { return request({ url: '/mes/base/bomItem/list', method: 'get', params: query }) }
 export function listBomItemChildren(bomVersionId, parentItemCode) { return request({ url: '/mes/base/bomItem/children', method: 'get', params: { bomVersionId, parentItemCode } }) }
 export function listBomItemByComponent(componentItemCode) { return request({ url: '/mes/base/bomItem/childrenByComponent', method: 'get', params: { componentItemCode } }) }
