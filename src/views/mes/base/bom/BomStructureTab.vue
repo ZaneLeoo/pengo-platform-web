@@ -40,9 +40,9 @@
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'component'">
-          <span style="display:flex;align-items:center;">
-            <span v-if="record.hasChildBom" class="child-bom-icon" title="有下级BOM">🔵</span>
-            <span v-else class="leaf-icon" title="无下级BOM">🟢</span>
+          <span :class="getBomTreeNodeClass(record)">
+            <span class="level-tag">L{{ getBomTreeLevel(record) }}</span>
+            <span v-if="shouldShowBomTreeElbow(record)" class="tree-line-elbow" aria-hidden="true"></span>
             <span class="item-code-text">{{ record.componentItemCode }}</span>
           </span>
         </template>
@@ -102,6 +102,13 @@ import { listBomVersion, listBomItemChildren, listBomItemByComponent, delBomItem
 import BomItemAddUpdateModal from './BomItemAddUpdateModal.vue'
 import { BearJiaIcon } from '@/utils/BearJiaIcon.js'
 import { buildBomCheckSummary } from './bomCheckSummary.js'
+import {
+  buildBomTreeNodes,
+  getBomTreeLevel,
+  getBomTreeNodeClass,
+  getChildBomTreeLevel,
+  shouldShowBomTreeElbow
+} from './bomTreeVisual.js'
 
 const props = defineProps({ bomMasterId: { type: Number, required: true } })
 
@@ -171,7 +178,7 @@ async function loadRootItems() {
   loading.value = true
   try {
     const res = await listBomItemChildren(selectedVersionId.value, null)
-    treeData.value = (res.data || []).map(transform)
+    treeData.value = buildBomTreeNodes(res.data || [], 1).map(transform)
   } finally { loading.value = false }
 }
 
@@ -199,7 +206,7 @@ async function handleExpand(expanded, record) {
     if (items.length === 0) {
       message.info('该物料暂未维护BOM')
     }
-    record.children = items.map(transform)
+    record.children = buildBomTreeNodes(items, getChildBomTreeLevel(record)).map(transform)
   } catch (e) {
     message.error('加载子件失败: ' + (e.msg || e.message))
   } finally { loading.value = false }
@@ -242,7 +249,51 @@ defineExpose({ loadData: loadVersions })
 }
 .count-text { color: #999; font-size: 13px; }
 .danger-text { color: #ff4d4f; }
-.child-bom-icon { margin-right: 4px; font-size: 14px; }
-.leaf-icon { margin-right: 4px; font-size: 14px; opacity: 0.5; }
-.item-code-text { margin-left: 4px; }
+.bom-tree-node {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.level-tag {
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 20px;
+  margin-right: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #595959;
+  background: #fafafa;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+.bom-tree-node.is-expandable .item-code-text {
+  font-weight: 600;
+}
+.tree-line-elbow {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 20px;
+  margin-right: 8px;
+  position: relative;
+}
+.tree-line-elbow::before,
+.tree-line-elbow::after {
+  position: absolute;
+  background: #d9d9d9;
+  content: '';
+}
+.tree-line-elbow::before {
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 10px;
+}
+.tree-line-elbow::after {
+  left: 0;
+  top: 9px;
+  width: 18px;
+  height: 1px;
+}
+.item-code-text { min-width: 0; }
 </style>
