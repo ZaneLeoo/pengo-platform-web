@@ -1,16 +1,14 @@
 <template>
-  <div class="composer-container">
+  <div class="prompt-dock">
     <div class="composer-wrapper">
       <div class="input-box">
-        <a-input 
+        <a-textarea
           ref="inputRef"
-          :model-value="modelValue"
-          type="textarea"
-          :autosize="{ minRows: 1, maxRows: 6 }"
+          :value="modelValue"
+          :auto-size="{ minRows: 1, maxRows: 6 }"
           placeholder="向智能助手发送消息..."
-          resize="none"
           class="composer-textarea"
-          @update:model-value="val => emit('update:modelValue', val)"
+          @input="event => emit('update:modelValue', event.target.value)"
           @keydown="handleKeyDown"
         />
         
@@ -94,7 +92,7 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-.composer-container {
+.prompt-dock {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -135,20 +133,24 @@ defineExpose({
 .composer-textarea {
   flex: 1;
   font-family: inherit;
-  
-  :deep(.el-textarea__inner) {
+  border: none;
+  box-shadow: none;
+  padding: 6px 4px;
+  font-size: 14.5px;
+  color: #1f2937;
+  line-height: 1.5;
+  background: transparent;
+  min-height: 24px !important;
+  resize: none;
+
+  &:focus {
     border: none;
     box-shadow: none;
-    padding: 6px 4px;
-    font-size: 14.5px;
-    color: #1f2937;
-    line-height: 1.5;
     background: transparent;
-    min-height: 24px !important;
+  }
 
-    &::placeholder {
-      color: #9ca3af;
-    }
+  &::placeholder {
+    color: #9ca3af;
   }
 }
 

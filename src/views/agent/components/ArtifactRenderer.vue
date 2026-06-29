@@ -10,7 +10,7 @@
       <div class="header-right">
         <!-- 提供简单的数据项统计 -->
         <span v-if="artifact.type === 'table'" class="data-count">
-          共 {{ rows.length }} 行
+          共 {{ tableDataSource.length }} 行
         </span>
       </div>
     </div>
@@ -20,19 +20,12 @@
       
       <div v-else class="table-container">
         <a-table 
-          :data="rows" 
-          max-height="320" 
-          stripe 
+          :columns="tableColumns"
+          :data-source="tableDataSource"
+          :pagination="false"
+          size="small"
           class="custom-table"
-        >
-          <a-table-column 
-            v-for="(column, index) in columns" 
-            :key="index" 
-            :prop="String(index)" 
-            :label="column" 
-            min-width="120"
-          />
-        </a-table>
+        />
       </div>
     </div>
   </div>
@@ -41,6 +34,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { buildArtifactTable } from './artifactTable.js'
 
 const props = defineProps({
   artifact: {
@@ -52,11 +46,9 @@ const props = defineProps({
 const chartRef = ref(null)
 let chartInstance = null
 
-const columns = computed(() => props.artifact.payload?.columns || [])
-const rows = computed(() => {
-  const rawRows = props.artifact.payload?.rows || []
-  return rawRows.map(row => Object.fromEntries(row.map((v, i) => [i, v])))
-})
+const tableModel = computed(() => buildArtifactTable(props.artifact.payload))
+const tableColumns = computed(() => tableModel.value.columns)
+const tableDataSource = computed(() => tableModel.value.dataSource)
 
 // 高阶冷调配色
 const colors = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']

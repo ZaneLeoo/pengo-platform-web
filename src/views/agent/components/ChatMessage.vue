@@ -10,7 +10,7 @@
       />
 
       <!-- 消息主体 -->
-      <div class="message-content">
+      <div class="ai-message-surface">
         <!-- 助手渲染 Markdown -->
         <div
           v-if="message.role === 'assistant'"
@@ -26,7 +26,7 @@
 
         <!-- 错误提示 -->
         <div v-if="message.error" class="error-box">
-          <a-alert :title="message.error" type="error" :closable="false" show-icon />
+          <a-alert :message="message.error" type="error" :closable="false" show-icon />
         </div>
       </div>
 
@@ -40,7 +40,7 @@
       </div>
 
       <!-- 消息操作条 (Hover 显示) -->
-      <div class="message-actions" v-if="!message.streaming && message.content">
+      <div class="ai-message-actions" v-if="!message.streaming && message.content">
         <button class="action-btn" title="复制消息" @click="copyMessage">
           <span><DocumentCopy /></span>
           <span>复制</span>
@@ -53,7 +53,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import Prism from 'prismjs'
-import { message } from 'ant-design-vue'
+import { message as antMessage } from 'ant-design-vue'
 import { CopyOutlined as DocumentCopy } from '@ant-design/icons-vue'
 import 'prismjs/themes/prism.css'
 // 显式引入 AI 常见输出的主流语言高亮包
@@ -216,13 +216,13 @@ function addCopyButtons() {
 
 function copyMessage() {
   navigator.clipboard.writeText(props.message.content).then(() => {
-    message.info({
+    antMessage.info({
       message: '消息内容已复制',
       type: 'success',
       duration: 1500
     })
   }).catch(err => {
-    message.error('复制失败，请重试')
+    antMessage.error('复制失败，请重试')
   })
 }
 </script>
@@ -259,13 +259,13 @@ function copyMessage() {
   gap: 8px;
 
   &:hover {
-    .message-actions {
+    .ai-message-actions {
       opacity: 1;
     }
   }
 }
 
-.message-content {
+.ai-message-surface {
   border-radius: 12px;
   font-size: 14.5px;
   line-height: 1.65;
@@ -489,7 +489,7 @@ function copyMessage() {
   width: 100%;
 }
 
-.message-actions {
+.ai-message-actions {
   display: flex;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -519,7 +519,7 @@ function copyMessage() {
 }
 
 .user {
-  .message-actions {
+  .ai-message-actions {
     left: auto;
     right: 0;
   }

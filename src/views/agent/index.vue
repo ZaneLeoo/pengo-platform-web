@@ -1,7 +1,6 @@
 <template>
   <div class="agent-page">
-    <!-- 局部并列内容区域 -->
-    <div class="agent-content-body">
+    <div class="agent-workspace">
       <button class="mobile-history-trigger" type="button" @click="drawerVisible = true">
         <span><ChatSquare /></span>
         <span>历史会话</span>
@@ -24,7 +23,7 @@
 
       <!-- 主体聊天流区域 -->
       <div class="chat-main">
-      <div ref="scrollRef" class="messages-container">
+      <div ref="scrollRef" class="chat-stream">
         <!-- 空状态欢迎页 -->
         <div v-if="messages.length === 0" class="welcome-screen">
           <h1 class="welcome-title">今天想分析什么？</h1>
@@ -309,7 +308,7 @@ onMounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.agent-content-body {
+.agent-workspace {
   flex: 1;
   display: flex;
   width: 100%;
@@ -352,7 +351,7 @@ onMounted(() => {
   min-width: 0;              /* 防止 Flex 内部元素溢出挤压侧栏 */
 }
 
-.messages-container {
+.chat-stream {
   flex: 1;
   width: 100%;
   overflow-y: auto;

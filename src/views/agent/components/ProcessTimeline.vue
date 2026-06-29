@@ -1,6 +1,6 @@
 <template>
-  <div v-if="steps.length" class="process-panel">
-    <button class="process-summary" type="button" @click="open = !open">
+  <div v-if="steps.length" class="reasoning-shell">
+    <button class="reasoning-summary" type="button" @click="open = !open">
       <span class="summary-dot" :class="{ running: !isFinished }"></span>
       <span>{{ summaryText }}</span>
       <span class="summary-arrow" :class="{ open }"><ArrowDown /></span>
@@ -63,13 +63,17 @@ function stepText(step) {
 </script>
 
 <style scoped lang="scss">
-.process-panel {
+.reasoning-shell {
   margin: 8px 0 18px;
   color: #6b7280;
   font-size: 13px;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(249, 250, 251, 0.7);
 }
 
-.process-summary {
+.reasoning-summary {
   display: inline-flex;
   align-items: center;
   gap: 8px;

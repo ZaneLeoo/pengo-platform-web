@@ -1,18 +1,21 @@
 import { Marked } from 'marked'
 
 const renderer = {
-  html(source) {
+  html(tokenOrSource) {
+    const source = readTokenText(tokenOrSource)
     return escapeHtml(source).replace(/on(?=[a-z]+\s*=)/gi, 'on&#8203;')
   },
-  link(href, title, text) {
-    if (!isSafeUrl(href)) return text
-    const titleAttribute = title ? ` title="${escapeAttribute(title)}"` : ''
-    return `<a href="${escapeAttribute(href)}"${titleAttribute} target="_blank" rel="noopener noreferrer">${text}</a>`
+  link(tokenOrHref, title, text) {
+    const { href, title: linkTitle, text: linkText } = readLinkToken(tokenOrHref, title, text)
+    if (!isSafeUrl(href)) return linkText
+    const titleAttribute = linkTitle ? ` title="${escapeAttribute(linkTitle)}"` : ''
+    return `<a href="${escapeAttribute(href)}"${titleAttribute} target="_blank" rel="noopener noreferrer">${linkText}</a>`
   },
-  image(href, title, text) {
-    if (!isSafeUrl(href)) return escapeHtml(text || '')
-    const titleAttribute = title ? ` title="${escapeAttribute(title)}"` : ''
-    return `<img src="${escapeAttribute(href)}" alt="${escapeAttribute(text || '')}"${titleAttribute}>`
+  image(tokenOrHref, title, text) {
+    const { href, title: imageTitle, text: imageText } = readLinkToken(tokenOrHref, title, text)
+    if (!isSafeUrl(href)) return escapeHtml(imageText || '')
+    const titleAttribute = imageTitle ? ` title="${escapeAttribute(imageTitle)}"` : ''
+    return `<img src="${escapeAttribute(href)}" alt="${escapeAttribute(imageText || '')}"${titleAttribute}>`
   }
 }
 
@@ -33,6 +36,31 @@ function isSafeUrl(value) {
   if (!url) return false
   if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../') || url.startsWith('#')) return true
   return /^(https?:|mailto:)/i.test(url)
+}
+
+/** 兼容 marked 17 的 token renderer API 与旧版参数 API。 */
+function readTokenText(value) {
+  if (value && typeof value === 'object') {
+    return value.text ?? value.raw ?? ''
+  }
+  return value
+}
+
+/** 读取链接/图片 token，旧版 marked 会以位置参数传入。 */
+function readLinkToken(tokenOrHref, title, text) {
+  if (tokenOrHref && typeof tokenOrHref === 'object') {
+    return {
+      href: tokenOrHref.href,
+      title: tokenOrHref.title,
+      text: tokenOrHref.text ?? ''
+    }
+  }
+
+  return {
+    href: tokenOrHref,
+    title,
+    text: text ?? ''
+  }
 }
 
 /** 转义 HTML 文本节点。 */
