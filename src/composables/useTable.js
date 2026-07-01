@@ -74,6 +74,7 @@ export function useTable(options) {
     total: 0,
     loading: false,
     selectedRowKeys: [],
+    selectedRows: [],
     columns: processedColumns,
   });
 
@@ -198,8 +199,9 @@ export function useTable(options) {
     return queryTableData();
   };
 
-  const onSelectionChange = (keys) => {
+  const onSelectionChange = (keys, rows) => {
     tableState.selectedRowKeys = keys;
+    tableState.selectedRows = rows;
   };
 
   const handleDelete = (ids) => {

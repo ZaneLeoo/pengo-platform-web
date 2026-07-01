@@ -6,27 +6,15 @@
       </a-form-item>
       <a-divider>物料信息</a-divider>
       <a-form-item label="子件物料" name="componentItemId">
-        <a-select
-          v-model:value="form.componentItemId"
+        <MaterialPicker
+          v-model="form.componentItemId"
+          :label="componentItemLabel"
           placeholder="请选择子件物料"
-          show-search
-          :filter-option="false"
-          :options="materialOptions"
-          @search="handleMaterialSearch"
-          @change="handleMaterialChange"
+          @select="handleComponentItemSelected"
         />
       </a-form-item>
-      <a-form-item label="子件编码">
-        <a-input v-model:value="form.componentItemCode" disabled />
-      </a-form-item>
-      <a-form-item label="子件名称">
-        <a-input v-model:value="form.componentItemName" disabled />
-      </a-form-item>
-      <a-form-item label="子件规格">
-        <a-input v-model:value="form.componentItemSpec" disabled />
-      </a-form-item>
-      <a-form-item label="子件单位">
-        <a-input v-model:value="form.componentItemUnit" disabled />
+      <a-form-item v-if="versionOptions.length > 0" label="引用版本" name="componentBomVersionId">
+        <a-select v-model:value="form.componentBomVersionId" placeholder="选择BOM版本（留空取默认）" allowClear :options="versionOptions" />
       </a-form-item>
       <a-divider>用量与发料</a-divider>
       <a-form-item label="用量" name="componentQty">
@@ -52,11 +40,10 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { getBomItem, addBomItem, updateBomItem } from '@/api/mes/base'
-import { listMaterial, getMaterial } from '@/api/mes/base'
-import { resolveBomItemMaterial } from './bomItemMaterialResolve.js'
+import { getBomItem, addBomItem, updateBomItem, listBomMaster, listBomVersion } from '@/api/mes/base'
+import MaterialPicker from '@/components/MaterialPicker.vue'
 import { validatePositiveNumber } from './bomItemValidation.js'
 
 const emit = defineEmits(['refresh'])
@@ -66,13 +53,15 @@ const formRef = ref()
 const visible = ref(false)
 const title = ref('新增子件')
 const isEdit = ref(false)
-const materialOptions = ref([])
+const componentItemLabel = ref('')
+const versionOptions = ref([])
 
 const form = reactive({
   lineNo: 10, componentItemId: null, componentItemCode: '', componentItemName: '',
   componentItemSpec: '', componentItemUnit: '', componentQty: 1,
   supplyType: 'PICK', fixedLossQty: 0, changeLossRate: 0,
-  isVirtual: 0, mrpExpandFlag: 1, bomVersionId: props.bomVersionId
+  isVirtual: 0, mrpExpandFlag: 1, bomVersionId: props.bomVersionId,
+  componentBomVersionId: null
 })
 
 const supplyTypeOptions = [
@@ -94,36 +83,46 @@ function resetForm() {
     lineNo: 10, componentItemId: null, componentItemCode: '', componentItemName: '',
     componentItemSpec: '', componentItemUnit: '', componentQty: 1,
     supplyType: 'PICK', fixedLossQty: 0, changeLossRate: 0,
-    isVirtual: 0, mrpExpandFlag: 1, bomVersionId: props.bomVersionId
+    isVirtual: 0, mrpExpandFlag: 1, bomVersionId: props.bomVersionId,
+    componentBomVersionId: null
   })
-  materialOptions.value = []
+  componentItemLabel.value = ''
+  versionOptions.value = []
 }
 
-async function handleMaterialSearch(keyword) {
-  if (!keyword) { materialOptions.value = []; return }
-  const query = { pageNum: 1, pageSize: 20 }
-  if (/^[A-Za-z0-9_-]+$/.test(keyword)) {
-    query.materialCode = keyword
-  } else {
-    query.materialName = keyword
+function handleComponentItemSelected(m) {
+  versionOptions.value = []
+  form.componentBomVersionId = null
+  if (!m) {
+    form.componentItemCode = ''; form.componentItemName = ''
+    form.componentItemSpec = ''; form.componentItemUnit = ''
+    nextTick(() => formRef.value?.clearValidate(['componentItemId']))
+    return
   }
-  const res = await listMaterial(query)
-  materialOptions.value = (res.rows || []).map(m => ({
-    label: `${m.materialCode} ${m.materialName}`, value: m.materialId
-  }))
-}
-
-async function handleMaterialChange(val) {
-  try {
-    const res = await getMaterial(val)
-    const m = res.data
-    if (m) {
-      form.componentItemCode = m.materialCode || ''
-      form.componentItemName = m.materialName || ''
-      form.componentItemSpec = m.spec || ''
-      form.componentItemUnit = m.unit || ''
-    }
-  } catch (e) { /* ignore */ }
+  form.componentItemCode = m.materialCode || ''
+  form.componentItemName = m.materialName || ''
+  form.componentItemSpec = m.spec || ''
+  form.componentItemUnit = m.unit || ''
+  nextTick(() => formRef.value?.clearValidate(['componentItemId']))
+  // 如果是自制/委外件，加载其BOM版本列表
+  if (m.sourceType === 'MAKE' || m.sourceType === 'OUTSOURCE') {
+    listBomMaster({ parentItemCode: m.materialCode }).then(res => {
+      const masters = res.rows || []
+      if (!masters.length) return
+      listBomVersion({ bomMasterId: masters[0].id }).then(vRes => {
+        const versions = vRes.rows || []
+        versionOptions.value = versions.map(v => ({
+          label: `${v.versionCode} ${v.versionName || ''}${v.defaultFlag === 1 ? ' (默认)' : ''}`,
+          value: v.id
+        }))
+        // 自动选择默认版本
+        const defaultVer = versions.find(v => v.defaultFlag === 1)
+        if (defaultVer) {
+          form.componentBomVersionId = defaultVer.id
+        }
+      })
+    })
+  }
 }
 
 function openAddModal(lineNo, parentItemCode) {
@@ -136,11 +135,25 @@ function openAddModal(lineNo, parentItemCode) {
 function openUpdateModal(record) {
   isEdit.value = true; title.value = '修改子件'
   resetForm()
-  getBomItem(record.id).then(async res => {
-    Object.assign(form, res.data)
-    await resolveBomItemMaterial({ form, materialOptions: materialOptions.value, listMaterial })
+  getBomItem(record.id).then(res => {
+    const data = res.data
+    Object.assign(form, data)
+    if (data.componentItemCode) {
+      componentItemLabel.value = `${data.componentItemCode} ${data.componentItemName || ''}`
+      // 加载该物料可选的BOM版本
+      listBomMaster({ parentItemCode: data.componentItemCode }).then(mRes => {
+        const masters = mRes.rows || []
+        if (!masters.length) return
+        listBomVersion({ bomMasterId: masters[0].id }).then(vRes => {
+          const versions = vRes.rows || []
+          versionOptions.value = versions.map(v => ({
+            label: `${v.versionCode} ${v.versionName || ''}${v.defaultFlag === 1 ? ' (默认)' : ''}`,
+            value: v.id
+          }))
+        })
+      })
+    }
     visible.value = true
-    setTimeout(() => formRef.value?.clearValidate?.(['componentItemId']), 0)
   })
 }
 

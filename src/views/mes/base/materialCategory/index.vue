@@ -108,7 +108,11 @@ loadTree()
 
 function handleTreeSelect(keys) {
   currentParentId.value = keys[0] || null
-  proTableRef.value?.search({ parentId: currentParentId.value })
+  const ref = proTableRef.value
+  if (ref) {
+    ref.searchFormData.parentId = currentParentId.value
+    ref.refresh()
+  }
 }
 
 function handleAdd(row) {

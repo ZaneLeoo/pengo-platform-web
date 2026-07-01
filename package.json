@@ -21,6 +21,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "@form-create/ant-design-vue": "^3.3.0",
     "@form-create/antd-designer": "^3.4.0",
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "@vueuse/core": "^10.9.0",
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",

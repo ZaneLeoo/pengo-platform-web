@@ -14,6 +14,9 @@
         <a-button v-if="selectedVersionId" @click="loadRootItems">
           <BearJiaIcon icon="reload-outlined" />刷新
         </a-button>
+        <a-button v-if="selectedVersionId" :loading="expanding" @click="handleExpandBom">
+          <BearJiaIcon icon="apartment-outlined" />BOM展开
+        </a-button>
         <a-button v-if="selectedVersionId" v-hasPermi="['mes:bomItem:import']" @click="handleImport">
           <BearJiaIcon icon="import-outlined" />导入子件
         </a-button>
@@ -28,6 +31,8 @@
 
     <a-table
       v-else
+      class="bom-tree-table"
+      :indent-size="20"
       :columns="columns"
       :data-source="treeData"
       :loading="loading"
@@ -36,13 +41,29 @@
       size="middle"
       :expand-icon-column-index="1"
       :default-expand-all-rows="false"
+      :expandedRowKeys="expandedRowKeys"
       @expand="handleExpand"
+      @expandedRowsChange="handleExpandedRowsChange"
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'component'">
-          <span :class="getBomTreeNodeClass(record)">
+          <span :class="getBomTreeNodeClass(record)" class="bom-tree-node-wrapper">
+            <!-- 树枝连接线 -->
+            <div v-if="getBomTreeLevel(record) > 1" class="bom-tree-lines">
+              <!-- 绘制所有上级深度的垂直参考线 -->
+              <span 
+                v-for="i in (getBomTreeLevel(record) - 1)" 
+                :key="i" 
+                class="bom-line-v"
+                :style="{ 
+                  left: `${20 * (i - getBomTreeLevel(record)) - 15}px`,
+                  bottom: i === (getBomTreeLevel(record) - 1) ? '50%' : '0'
+                }"
+              ></span>
+              <!-- 当前节点的水平折线，连接垂直线和Lxx标签 -->
+              <span class="bom-line-h"></span>
+            </div>
             <span class="level-tag">L{{ getBomTreeLevel(record) }}</span>
-            <span v-if="shouldShowBomTreeElbow(record)" class="tree-line-elbow" aria-hidden="true"></span>
             <span class="item-code-text">{{ record.componentItemCode }}</span>
           </span>
         </template>
@@ -51,6 +72,7 @@
         </template>
         <template v-else-if="column.key === 'operate'">
           <a-space>
+            <a v-if="record.hasChildBom" @click.stop="handleExpandSingleBom(record)">展开</a>
             <a @click="handleEdit(record)" v-hasPermi="['mes:bomItem:edit']">编辑</a>
             <a-popconfirm title="确认删除?" @confirm="handleDeleteSingle(record)">
               <a class="danger-text" v-hasPermi="['mes:bomItem:remove']">删除</a>
@@ -106,13 +128,14 @@ import {
   buildBomTreeNodes,
   getBomTreeLevel,
   getBomTreeNodeClass,
-  getChildBomTreeLevel,
-  shouldShowBomTreeElbow
+  getChildBomTreeLevel
 } from './bomTreeVisual.js'
 
 const props = defineProps({ bomMasterId: { type: Number, required: true } })
 
 const loading = ref(false)
+const expanding = ref(false)
+const expandedRowKeys = ref([])
 const selectedVersionId = ref(null)
 const versionOptions = ref([])
 const treeData = ref([])
@@ -176,6 +199,7 @@ loadVersions()
 async function loadRootItems() {
   if (!selectedVersionId.value) return
   loading.value = true
+  expandedRowKeys.value = []
   try {
     const res = await listBomItemChildren(selectedVersionId.value, null)
     treeData.value = buildBomTreeNodes(res.data || [], 1).map(transform)
@@ -200,8 +224,9 @@ async function handleExpand(expanded, record) {
   loading.value = true
   try {
     // hasChildBom → 跨BOM查找该半成品默认版本的子件
-    const api = record.hasChildBom ? listBomItemByComponent : (code => listBomItemChildren(selectedVersionId.value, code))
-    const res = await api(record.componentItemCode)
+    const res = record.hasChildBom
+      ? await listBomItemByComponent(record.componentItemCode, record.componentBomVersionId)
+      : await listBomItemChildren(selectedVersionId.value, record.componentItemCode)
     const items = res.data || []
     if (items.length === 0) {
       message.info('该物料暂未维护BOM')
@@ -212,12 +237,80 @@ async function handleExpand(expanded, record) {
   } finally { loading.value = false }
 }
 
+function handleExpandedRowsChange(keys) {
+  expandedRowKeys.value = keys
+}
+
 function handleAddItem() {
   const maxLine = treeData.value.reduce((max, i) => Math.max(max, i.lineNo || 0), 0)
   itemModalRef.value?.openAddModal(maxLine + 10)
 }
 
 function handleEdit(record) { itemModalRef.value?.openUpdateModal(record) }
+
+/** 工具栏：递归展开全部 BOM 节点 */
+async function handleExpandBom() {
+  expanding.value = true
+  try {
+    let count = 0
+    for (const node of treeData.value) {
+      count += await expandNodeRecursive(node)
+    }
+    if (count > 0) {
+      message.success(`BOM展开完成，共加载 ${count} 个子件节点`)
+    } else {
+      message.info('当前 BOM 已是完全展开状态，未发现可展开的子件')
+    }
+  } catch (e) {
+    message.error('BOM展开失败')
+  } finally {
+    expanding.value = false
+  }
+}
+
+/** 操作列：展开单个节点的子 BOM */
+async function handleExpandSingleBom(record) {
+  expanding.value = true
+  try {
+    const count = await expandNodeRecursive(record)
+    if (count > 0) {
+      message.success(`展开完成，共加载 ${count} 个子件节点`)
+    } else {
+      message.info('该物料无子件可展开')
+    }
+  } catch (e) {
+    message.error('展开失败')
+  } finally {
+    expanding.value = false
+  }
+}
+
+/** 递归展开单个节点：只有 hasChildBom 的节点才去加载其子 BOM */
+async function expandNodeRecursive(node) {
+  let count = 0
+  if (!node.hasChildBom) return count
+  // 已加载过真实子件则跳过
+  const loaded = Array.isArray(node.children) && node.children.length > 0
+  if (!loaded) {
+    const res = await listBomItemByComponent(node.componentItemCode, node.componentBomVersionId)
+    const items = res.data || []
+    if (items.length > 0) {
+      node.children = buildBomTreeNodes(items, getChildBomTreeLevel(node)).map(transform)
+      count += items.length
+    } else {
+      node.children = null
+    }
+  }
+  if (Array.isArray(node.children)) {
+    if (!expandedRowKeys.value.includes(node.id)) {
+      expandedRowKeys.value.push(node.id)
+    }
+    for (const child of node.children) {
+      count += await expandNodeRecursive(child)
+    }
+  }
+  return count
+}
 
 async function handleDeleteSingle(record) {
   await delBomItem(record.id)
@@ -270,30 +363,40 @@ defineExpose({ loadData: loadVersions })
 .bom-tree-node.is-expandable .item-code-text {
   font-weight: 600;
 }
-.tree-line-elbow {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 20px;
-  margin-right: 8px;
-  position: relative;
-}
-.tree-line-elbow::before,
-.tree-line-elbow::after {
-  position: absolute;
-  background: #d9d9d9;
-  content: '';
-}
-.tree-line-elbow::before {
-  left: 0;
-  top: 0;
-  width: 1px;
-  height: 10px;
-}
-.tree-line-elbow::after {
-  left: 0;
-  top: 9px;
-  width: 18px;
-  height: 1px;
-}
+
 .item-code-text { min-width: 0; }
+
+.item-code-text { min-width: 0; }
+
+/* 树枝连接线容器与定位 */
+.bom-tree-node-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.bom-tree-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.bom-line-v {
+  position: absolute;
+  top: -24px; /* 向上穿透单元格顶边以对接上一行 */
+  width: 1px;
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+.bom-line-h {
+  position: absolute;
+  top: 50%;
+  left: -35px; /* 与倒数第一条垂直参考线（-35px）完全对接 */
+  width: 31px; /* 缩短至31px，为Lxx标签左侧留出4px微量空白 */
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.12);
+}
 </style>

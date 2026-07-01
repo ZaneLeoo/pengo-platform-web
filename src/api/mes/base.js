@@ -32,7 +32,7 @@ export function checkBomVersion(id) { return request({ url: '/mes/base/bomVersio
 export function compareBomVersion(query) { return request({ url: '/mes/base/bomVersion/compare', method: 'get', params: query }) }
 export function listBomItem(query) { return request({ url: '/mes/base/bomItem/list', method: 'get', params: query }) }
 export function listBomItemChildren(bomVersionId, parentItemCode) { return request({ url: '/mes/base/bomItem/children', method: 'get', params: { bomVersionId, parentItemCode } }) }
-export function listBomItemByComponent(componentItemCode) { return request({ url: '/mes/base/bomItem/childrenByComponent', method: 'get', params: { componentItemCode } }) }
+export function listBomItemByComponent(componentItemCode, bomVersionId) { return request({ url: '/mes/base/bomItem/childrenByComponent', method: 'get', params: { componentItemCode, bomVersionId } }) }
 export function getBomItem(id) { return request({ url: '/mes/base/bomItem/' + id, method: 'get' }) }
 export function addBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'post', data }) }
 export function updateBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'put', data }) }

@@ -65,6 +65,7 @@
           :expandable="props.expandable"
           :default-expand-all-rows="props.isTreeTable"
           :indent-size="props.isTreeTable ? 20 : undefined"
+          :customRow="customRow"
           v-bind="$attrs"
           @change="handleTableChange"
           @resizeColumn="handleResizeColumn"
@@ -436,6 +437,29 @@ const finalRowSelectionConfig = computed(() => {
   if (!props.showSelection || !tableConfigStore.rowSelection) return undefined;
   return rowSelection.value;
 });
+
+// 单击行切换选中状态
+const customRow = (record) => {
+  return {
+    onClick: () => {
+      // 没有行选择时不处理
+      if (!finalRowSelectionConfig.value) return;
+      const key = record[props.rowKey];
+      const keys = [...tableState.selectedRowKeys];
+      const rows = [...(tableState.selectedRows || [])];
+      const idx = keys.indexOf(key);
+      if (idx > -1) {
+        keys.splice(idx, 1);
+        rows.splice(idx, 1);
+      } else {
+        keys.push(key);
+        rows.push(record);
+      }
+      tableState.selectedRowKeys = keys;
+      tableState.selectedRows = rows;
+    },
+  };
+};
 
 const showColumnSettings = props.showColumnSettings;
 

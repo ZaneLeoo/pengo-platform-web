@@ -50,7 +50,7 @@ function isExternalLink(path) {
   return /^(https?:|mailto:|tel:)/.test(path);
 }
 
-// 过滤异步路由（用于侧边栏，保留外链）
+// 过滤异步路由（用于侧边栏，跳过隐藏路由，保留外链）
 function filterAsyncRouterForSidebar(asyncRouterMap, lastRouter = false, type = false) {
   return asyncRouterMap.filter((route) => {
     if (type && route.children) {
@@ -70,6 +70,10 @@ function filterAsyncRouterForSidebar(asyncRouterMap, lastRouter = false, type = 
     }
     if (route.children && route.children.length) {
       route.children = filterAsyncRouterForSidebar(route.children, route, type);
+    }
+    // 侧边栏不展示隐藏路由
+    if (route.hidden) {
+      return false;
     }
     return true;
   });

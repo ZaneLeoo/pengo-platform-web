@@ -14,10 +14,6 @@ export function getChildBomTreeLevel(record = {}) {
   return getBomTreeLevel(record) + 1
 }
 
-export function shouldShowBomTreeElbow(record = {}) {
-  return getBomTreeLevel(record) > 1
-}
-
 export function getBomTreeNodeClass(record = {}) {
   return `bom-tree-node ${record.hasChildBom ? 'is-expandable' : 'is-leaf'}`
 }
