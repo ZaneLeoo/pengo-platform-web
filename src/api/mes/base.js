@@ -52,4 +52,5 @@ export function recognizeBomImport(data) {
 }
 export function validateBomImport(id) { return request({ url: `/mes/base/bomImport/${id}/validate`, method: 'post' }) }
 export function updateBomImport(id, data) { return request({ url: `/mes/base/bomImport/${id}`, method: 'put', data }) }
+export function importBomImport(id, data) { return request({ url: `/mes/base/bomImport/${id}/import`, method: 'post', data }) }
 export function delBomImport(ids) { return request({ url: '/mes/base/bomImport/' + ids, method: 'delete' }) }

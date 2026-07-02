@@ -17,8 +17,8 @@
         <a-button v-if="selectedVersionId" :loading="expanding" @click="handleExpandBom">
           <BearJiaIcon icon="apartment-outlined" />BOM展开
         </a-button>
-        <a-button v-if="selectedVersionId" v-hasPermi="['mes:bomItem:import']" @click="handleImport">
-          <BearJiaIcon icon="import-outlined" />导入子件
+        <a-button v-if="selectedVersionId" v-hasPermi="['mes:bomItem:add']" @click="handleImport">
+          <BearJiaIcon icon="import-outlined" />AI识别导入
         </a-button>
         <a-button v-if="selectedVersionId" @click="handleCheckBom">
           <BearJiaIcon icon="check-circle-outlined" />检查BOM
@@ -83,6 +83,7 @@
     </a-table>
 
     <BomItemAddUpdateModal ref="itemModalRef" :bomVersionId="selectedVersionId" @refresh="loadRootItems" />
+    <BomOcrImportDrawer ref="ocrImportDrawerRef" @imported="loadRootItems" />
 
     <a-drawer v-model:open="checkDrawerOpen" title="BOM完整性检查" width="520">
       <a-spin :spinning="checking">
@@ -122,6 +123,7 @@ import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { listBomVersion, listBomItemChildren, listBomItemByComponent, delBomItem, checkBomVersion } from '@/api/mes/base'
 import BomItemAddUpdateModal from './BomItemAddUpdateModal.vue'
+import BomOcrImportDrawer from './BomOcrImportDrawer.vue'
 import { BearJiaIcon } from '@/utils/BearJiaIcon.js'
 import { buildBomCheckSummary } from './bomCheckSummary.js'
 import {
@@ -140,6 +142,7 @@ const selectedVersionId = ref(null)
 const versionOptions = ref([])
 const treeData = ref([])
 const itemModalRef = ref()
+const ocrImportDrawerRef = ref()
 const checkDrawerOpen = ref(false)
 const checking = ref(false)
 const checkResult = ref(null)
@@ -319,7 +322,7 @@ async function handleDeleteSingle(record) {
 }
 
 function handleImport() {
-  message.info('批量导入功能即将上线')
+  ocrImportDrawerRef.value?.open(selectedVersionId.value)
 }
 
 async function handleCheckBom() {
