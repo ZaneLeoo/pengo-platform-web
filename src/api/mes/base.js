@@ -37,3 +37,19 @@ export function getBomItem(id) { return request({ url: '/mes/base/bomItem/' + id
 export function addBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'post', data }) }
 export function updateBomItem(data) { return request({ url: '/mes/base/bomItem', method: 'put', data }) }
 export function delBomItem(ids) { return request({ url: '/mes/base/bomItem/' + ids, method: 'delete' }) }
+
+// BOM OCR 导入
+export function listBomImport(query) { return request({ url: '/mes/base/bomImport/list', method: 'get', params: query }) }
+export function getBomImport(id) { return request({ url: '/mes/base/bomImport/' + id, method: 'get' }) }
+export function recognizeBomImport(data) {
+  return request({
+    url: '/mes/base/bomImport/recognize',
+    method: 'post',
+    data,
+    timeout: 180000,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+export function validateBomImport(id) { return request({ url: `/mes/base/bomImport/${id}/validate`, method: 'post' }) }
+export function updateBomImport(id, data) { return request({ url: `/mes/base/bomImport/${id}`, method: 'put', data }) }
+export function delBomImport(ids) { return request({ url: '/mes/base/bomImport/' + ids, method: 'delete' }) }
