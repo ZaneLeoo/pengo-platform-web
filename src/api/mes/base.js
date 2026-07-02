@@ -46,7 +46,7 @@ export function recognizeBomImport(data) {
     url: '/mes/base/bomImport/recognize',
     method: 'post',
     data,
-    timeout: 600000,
+    timeout: 60000,
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }

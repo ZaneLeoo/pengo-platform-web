@@ -62,6 +62,9 @@
                 statusLabel(currentDraft.status)
               }}</a-tag>
             </a-descriptions-item>
+            <a-descriptions-item v-if="currentDraft.errorMessage" label="失败原因">
+              {{ currentDraft.errorMessage }}
+            </a-descriptions-item>
             <a-descriptions-item label="标题">{{
               currentDraft.document?.title || '-'
             }}</a-descriptions-item>
@@ -108,7 +111,12 @@
               <template v-else-if="column.key === 'action'">
                 <a-space>
                   <a @click="loadDraft(record.id)">查看</a>
-                  <a @click="handleValidate(record.id)">校验</a>
+                  <a
+                    :class="{ 'disabled-link': isProcessingStatus(record.status) }"
+                    @click="!isProcessingStatus(record.status) && handleValidate(record.id)"
+                  >
+                    校验
+                  </a>
                   <a-popconfirm title="确认删除该草稿？" @confirm="handleDelete(record.id)">
                     <a class="danger-text">删除</a>
                   </a-popconfirm>
@@ -190,7 +198,7 @@
 </template>
 
 <script setup name="BomImport">
-import { computed, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   listBomImport,
@@ -210,6 +218,7 @@ const taskLoading = ref(false);
 const taskRows = ref([]);
 const currentDraft = ref(null);
 const activeTab = ref('items');
+let pollingTimer = null;
 const query = reactive({ pageNum: 1, pageSize: 10 });
 const pagination = computed(() => ({
   current: query.pageNum,
@@ -262,6 +271,10 @@ const itemColumns = [
 
 loadTasks();
 
+onBeforeUnmount(() => {
+  clearPolling();
+});
+
 function handleBeforeUpload(file) {
   selectedFile.value = file;
   fileList.value = [file];
@@ -295,13 +308,48 @@ async function handleRecognize() {
     const res = await recognizeBomImport(formData);
     currentDraft.value = res.data;
     activeTab.value = 'items';
-    message.success('识别完成，已生成导入草稿');
+    message.success('已提交识别任务，正在后台处理');
     resetUpload();
     await loadTasks();
+    if (res.data?.id) {
+      pollDraftUntilFinished(res.data.id);
+    } else {
+      recognizing.value = false;
+    }
   } catch (error) {
     recognizeError.value = error?.message || '识别失败';
-  } finally {
     recognizing.value = false;
+  }
+}
+
+async function pollDraftUntilFinished(id) {
+  clearPolling();
+  recognizing.value = true;
+  try {
+    const res = await getBomImport(id);
+    currentDraft.value = res.data;
+    if (isTerminalStatus(res.data?.status)) {
+      recognizing.value = false;
+      await loadTasks();
+      if (res.data?.status === 'failed') {
+        recognizeError.value = res.data?.errorMessage || '识别失败，请稍后重试';
+        message.error('识别失败');
+      } else {
+        message.success('识别完成，已生成导入草稿');
+      }
+      return;
+    }
+    pollingTimer = window.setTimeout(() => pollDraftUntilFinished(id), 3000);
+  } catch (error) {
+    recognizing.value = false;
+    recognizeError.value = error?.message || '查询识别任务失败';
+  }
+}
+
+function clearPolling() {
+  if (pollingTimer) {
+    window.clearTimeout(pollingTimer);
+    pollingTimer = null;
   }
 }
 
@@ -349,6 +397,7 @@ async function handleDelete(id) {
 
 function statusLabel(value) {
   const labels = {
+    processing: '识别中',
     draft: '草稿',
     recognized: '已识别',
     validated: '已校验',
@@ -360,6 +409,7 @@ function statusLabel(value) {
 
 function statusColor(value) {
   const colors = {
+    processing: 'blue',
     draft: 'default',
     recognized: 'blue',
     validated: 'green',
@@ -367,6 +417,14 @@ function statusColor(value) {
     failed: 'red',
   };
   return colors[value] || 'default';
+}
+
+function isProcessingStatus(value) {
+  return value === 'processing';
+}
+
+function isTerminalStatus(value) {
+  return ['recognized', 'validated', 'imported', 'failed'].includes(value);
 }
 
 function riskLabel(value) {
@@ -406,6 +464,11 @@ function issueColor(value) {
 
   .danger-text {
     color: #ff4d4f;
+  }
+
+  .disabled-link {
+    color: rgba(0, 0, 0, 0.25);
+    cursor: not-allowed;
   }
 
   :deep(.ant-upload-drag-icon) {
