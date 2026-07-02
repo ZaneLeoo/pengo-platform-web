@@ -135,7 +135,7 @@
                 :pagination="{ pageSize: 10, showSizeChanger: true }"
                 row-key="lineNo"
                 size="small"
-                :scroll="{ x: 980 }"
+                :scroll="{ x: 1140 }"
               >
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'riskLevel'">
@@ -262,6 +262,8 @@ const itemColumns = [
   { title: '图号', dataIndex: 'drawingNo', key: 'drawingNo', width: 150 },
   { title: '名称', dataIndex: 'itemName', key: 'itemName', width: 160 },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
+  { title: '类型', dataIndex: 'itemType', key: 'itemType', width: 90 },
   { title: '规格', dataIndex: 'spec', key: 'spec', width: 220, ellipsis: true },
   { title: '单重', dataIndex: 'unitWeight', key: 'unitWeight', width: 80 },
   { title: '总重', dataIndex: 'totalWeight', key: 'totalWeight', width: 80 },
