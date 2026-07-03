@@ -2,7 +2,7 @@
   <a-drawer
     v-model:open="visible"
     title="AI 识别导入 BOM"
-    width="1120"
+    width="min(96vw, 1480px)"
     :destroy-on-close="true"
     @close="handleClose"
   >
@@ -15,7 +15,7 @@
       />
 
       <a-row :gutter="16">
-        <a-col :span="8">
+        <a-col :span="6">
           <a-card size="small" title="上传图纸">
             <a-upload-dragger
               :accept="acceptTypes"
@@ -32,30 +32,6 @@
               <p class="ant-upload-hint">支持图纸截图、扫描件和 PDF。</p>
             </a-upload-dragger>
 
-            <a-collapse class="advanced-options" ghost>
-              <a-collapse-panel key="advanced" header="高级参数">
-                <a-form layout="vertical">
-                  <a-form-item label="Dify 文件变量">
-                    <a-input v-model:value="recognizeForm.fileVariable" placeholder="image" />
-                  </a-form-item>
-                  <a-form-item label="识别提示">
-                    <a-textarea
-                      v-model:value="recognizeForm.query"
-                      :auto-size="{ minRows: 2, maxRows: 4 }"
-                      placeholder="可选，不填则使用后端默认提示"
-                    />
-                  </a-form-item>
-                  <a-form-item label="额外 inputs JSON">
-                    <a-textarea
-                      v-model:value="recognizeForm.inputs"
-                      :auto-size="{ minRows: 2, maxRows: 4 }"
-                      placeholder='例如 {"template":"lamp-bom"}'
-                    />
-                  </a-form-item>
-                </a-form>
-              </a-collapse-panel>
-            </a-collapse>
-
             <a-space class="action-row">
               <a-button type="primary" :loading="recognizing" @click="handleRecognize">
                 开始识别
@@ -70,6 +46,19 @@
               type="error"
               show-icon
             />
+          </a-card>
+
+          <a-card v-if="recognizing" class="mt-16 recognize-progress-card" size="small">
+            <a-space direction="vertical" class="progress-content">
+              <div class="progress-title">正在识别图纸</div>
+              <a-progress :percent="recognitionProgress" status="active" />
+              <a-steps
+                direction="vertical"
+                size="small"
+                :current="recognitionStep"
+                :items="recognitionStepItems"
+              />
+            </a-space>
           </a-card>
 
           <a-card v-if="currentDraft" class="mt-16" size="small" title="识别摘要">
@@ -96,7 +85,7 @@
           </a-card>
         </a-col>
 
-        <a-col :span="16">
+        <a-col :span="18">
           <a-card size="small" title="草稿确认">
             <template #extra>
               <a-space>
@@ -123,10 +112,11 @@
                 <a-table
                   :columns="itemColumns"
                   :data-source="currentDraft.items || []"
-                  :pagination="{ pageSize: 8, showSizeChanger: true }"
+                  :pagination="itemPagination"
                   row-key="lineNo"
                   size="small"
-                  :scroll="{ x: 1240 }"
+                  :scroll="{ x: 1560 }"
+                  @change="handleItemTableChange"
                 >
                   <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'lineNo'">
@@ -259,32 +249,45 @@ const currentDraft = ref(null)
 const importResult = ref(null)
 const activeTab = ref('items')
 let pollingTimer = null
-
-const recognizeForm = reactive({
-  fileVariable: 'image',
-  query: '',
-  inputs: '',
+let progressTimer = null
+const defaultFileVariable = 'image'
+const recognitionProgress = ref(0)
+const recognitionStep = ref(0)
+const itemPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: total => `共 ${total} 行`,
 })
+
+const recognitionStepItems = [
+  { title: '提交识别任务' },
+  { title: 'OCR 解析图纸' },
+  { title: '结构化 BOM 明细' },
+  { title: '生成导入草稿' },
+]
 
 const canImport = computed(() => {
   return currentDraft.value?.id && !recognizing.value && !isProcessingStatus(currentDraft.value?.status)
 })
 
 const itemColumns = [
-  { title: '序号', dataIndex: 'lineNo', key: 'lineNo', width: 92 },
-  { title: '物料编码候选', dataIndex: 'componentCodeCandidate', key: 'componentCodeCandidate', width: 160 },
-  { title: '名称', dataIndex: 'itemName', key: 'itemName', width: 150 },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 110 },
-  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-  { title: '类型', dataIndex: 'itemType', key: 'itemType', width: 110 },
-  { title: '规格', dataIndex: 'spec', key: 'spec', width: 190 },
-  { title: '备注', dataIndex: 'remark', key: 'remark', width: 160 },
+  { title: '序号', dataIndex: 'lineNo', key: 'lineNo', width: 96 },
+  { title: '物料编码候选', dataIndex: 'componentCodeCandidate', key: 'componentCodeCandidate', width: 190 },
+  { title: '名称', dataIndex: 'itemName', key: 'itemName', width: 180 },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 120 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
+  { title: '类型', dataIndex: 'itemType', key: 'itemType', width: 130 },
+  { title: '规格', dataIndex: 'spec', key: 'spec', width: 260 },
+  { title: '备注', dataIndex: 'remark', key: 'remark', width: 220 },
   { title: '风险', dataIndex: 'riskLevel', key: 'riskLevel', width: 90 },
   { title: '问题', dataIndex: 'issueMessage', key: 'issueMessage', width: 180, ellipsis: true },
 ]
 
 onBeforeUnmount(() => {
   clearPolling()
+  clearProgress()
 })
 
 function open(bomVersionId) {
@@ -295,12 +298,14 @@ function open(bomVersionId) {
 
 function resetState() {
   clearPolling()
+  clearProgress()
   selectedFile.value = null
   fileList.value = []
   recognizeError.value = ''
   currentDraft.value = null
   importResult.value = null
   activeTab.value = 'items'
+  itemPagination.current = 1
 }
 
 function handleBeforeUpload(file) {
@@ -328,12 +333,11 @@ async function handleRecognize() {
   recognizeError.value = ''
   importResult.value = null
   recognizing.value = true
+  startProgress()
   try {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
-    if (recognizeForm.fileVariable) formData.append('fileVariable', recognizeForm.fileVariable)
-    if (recognizeForm.query) formData.append('query', recognizeForm.query)
-    if (recognizeForm.inputs) formData.append('inputs', recognizeForm.inputs)
+    formData.append('fileVariable', defaultFileVariable)
     const res = await mesBaseApi.recognizeBomImport(formData)
     currentDraft.value = res.data
     activeTab.value = 'items'
@@ -343,10 +347,12 @@ async function handleRecognize() {
       pollDraftUntilFinished(res.data.id)
     } else {
       recognizing.value = false
+      stopProgress(false)
     }
   } catch (error) {
     recognizeError.value = error?.message || '识别失败'
     recognizing.value = false
+    stopProgress(false)
   }
 }
 
@@ -358,6 +364,7 @@ async function pollDraftUntilFinished(id) {
     currentDraft.value = res.data
     if (isTerminalStatus(res.data?.status)) {
       recognizing.value = false
+      stopProgress(res.data?.status !== 'failed')
       if (res.data?.status === 'failed') {
         recognizeError.value = res.data?.errorMessage || '识别失败，请稍后重试'
         message.error('识别失败')
@@ -369,8 +376,33 @@ async function pollDraftUntilFinished(id) {
     pollingTimer = window.setTimeout(() => pollDraftUntilFinished(id), 3000)
   } catch (error) {
     recognizing.value = false
+    stopProgress(false)
     recognizeError.value = error?.message || '查询识别任务失败'
   }
+}
+
+function startProgress() {
+  clearProgress()
+  recognitionProgress.value = 8
+  recognitionStep.value = 0
+  progressTimer = window.setInterval(() => {
+    if (recognitionProgress.value < 30) {
+      recognitionProgress.value += 6
+      recognitionStep.value = 1
+    } else if (recognitionProgress.value < 68) {
+      recognitionProgress.value += 4
+      recognitionStep.value = 2
+    } else if (recognitionProgress.value < 92) {
+      recognitionProgress.value += 2
+      recognitionStep.value = 3
+    }
+  }, 1200)
+}
+
+function stopProgress(success) {
+  clearProgress()
+  recognitionProgress.value = success ? 100 : 0
+  recognitionStep.value = success ? 3 : 0
 }
 
 async function handleSave() {
@@ -416,6 +448,7 @@ async function handleImport() {
 
 function handleClose() {
   clearPolling()
+  clearProgress()
 }
 
 function clearPolling() {
@@ -423,6 +456,18 @@ function clearPolling() {
     window.clearTimeout(pollingTimer)
     pollingTimer = null
   }
+}
+
+function clearProgress() {
+  if (progressTimer) {
+    window.clearInterval(progressTimer)
+    progressTimer = null
+  }
+}
+
+function handleItemTableChange(page) {
+  itemPagination.current = page.current
+  itemPagination.pageSize = page.pageSize
 }
 
 function statusLabel(value) {
@@ -488,8 +533,17 @@ defineExpose({ open })
     margin-top: 12px;
   }
 
-  .advanced-options {
-    margin-top: 12px;
+  .recognize-progress-card {
+    background: #f8fbff;
+  }
+
+  .progress-content {
+    width: 100%;
+  }
+
+  .progress-title {
+    color: #1f1f1f;
+    font-weight: 600;
   }
 
   :deep(.ant-upload-drag-icon) {
