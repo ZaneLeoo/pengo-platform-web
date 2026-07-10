@@ -23,7 +23,7 @@
 
       <a-form class="search-form" layout="inline" :model="query">
         <a-form-item label="应用编码">
-          <a-input v-model:value="query.appCode" allow-clear placeholder="AGENT_CHAT / BOM_OCR" />
+          <a-input v-model:value="query.appCode" allow-clear placeholder="AGENT_SUPERVISOR / BOM_OCR" />
         </a-form-item>
         <a-form-item label="应用名称">
           <a-input v-model:value="query.appName" allow-clear placeholder="应用名称" />
@@ -100,7 +100,7 @@
               <a-input
                 v-model:value="form.appCode"
                 :disabled="!!form.id"
-                placeholder="例如 AGENT_CHAT / BOM_OCR"
+                placeholder="例如 AGENT_SUPERVISOR / BOM_OCR"
               />
             </a-form-item>
           </a-col>
