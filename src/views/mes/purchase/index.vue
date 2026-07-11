@@ -15,8 +15,12 @@
       />
       <a-button type="primary" @click="load">查询</a-button>
       <a-button @click="reset">重置</a-button>
-      <a-button type="primary" ghost @click="openAdd">新增{{ title }}</a-button>
-      <a-button danger :disabled="!selected.length" @click="remove">删除</a-button>
+      <a-button v-if="type !== 'inventory'" type="primary" ghost @click="openAdd"
+        >新增{{ title }}</a-button
+      >
+      <a-button v-if="type !== 'inventory'" danger :disabled="!selected.length" @click="remove"
+        >删除</a-button
+      >
     </a-space>
 
     <a-table
@@ -30,7 +34,7 @@
     >
       <template #bodyCell="{ column, record }">
         <a-space v-if="column.key === 'action'">
-          <a @click="openEdit(record)">编辑</a>
+          <a v-if="type !== 'inventory'" @click="openEdit(record)">编辑</a>
           <a @click="openDetail(record)">详情</a>
         </a-space>
       </template>
@@ -81,22 +85,15 @@
           size="small"
         >
           <template #bodyCell="{ column, record, index }">
-            <a-input-number
-              v-if="column.key === 'materialId'"
-              v-model:value="record.materialId"
-              :min="1"
-              style="width: 100%"
+            <MaterialPicker
+              v-if="column.key === 'material'"
+              v-model="record.materialId"
+              :label="materialLabel(record)"
+              placeholder="请选择物料"
+              @select="(material) => selectOrderMaterial(record, material)"
             />
-            <a-input
-              v-else-if="column.key === 'materialCode'"
-              v-model:value="record.materialCode"
-              placeholder="物料编码"
-            />
-            <a-input
-              v-else-if="column.key === 'materialName'"
-              v-model:value="record.materialName"
-              placeholder="物料名称"
-            />
+            <span v-else-if="column.key === 'materialCode'">{{ record.materialCode || '-' }}</span>
+            <span v-else-if="column.key === 'materialName'">{{ record.materialName || '-' }}</span>
             <a-input
               v-else-if="column.key === 'unit'"
               v-model:value="record.unit"
@@ -147,6 +144,7 @@ import {
   purchaseInboundApi,
   inventoryBalanceApi,
 } from '@/api/mes/purchase';
+import MaterialPicker from '@/components/MaterialPicker.vue';
 
 const route = useRoute();
 const formRef = ref();
@@ -207,8 +205,7 @@ const configs = {
     api: purchaseReceiptApi,
     fields: [
       { key: 'receiptCode', label: '到货单号', required: true },
-      { key: 'orderId', label: '采购订单ID', type: 'number', required: true },
-      { key: 'orderCode', label: '采购订单号', required: true },
+      { key: 'supplierName', label: '供应商' },
       { key: 'receiptDate', label: '到货日期', type: 'date', required: true },
       { key: 'status', label: '状态', type: 'status', options: receiptStatuses, required: true },
       {
@@ -227,8 +224,6 @@ const configs = {
     api: purchaseInboundApi,
     fields: [
       { key: 'inboundCode', label: '入库单号', required: true },
-      { key: 'receiptId', label: '到货单ID', type: 'number', required: true },
-      { key: 'receiptCode', label: '到货单号', required: true },
       { key: 'inboundDate', label: '入库日期', type: 'date', required: true },
       { key: 'warehouseCode', label: '入库仓库', required: true },
       { key: 'status', label: '状态', type: 'status', options: inboundStatuses, required: true },
@@ -240,7 +235,6 @@ const configs = {
     code: 'materialCode',
     api: inventoryBalanceApi,
     fields: [
-      { key: 'materialId', label: '物料ID', type: 'number', required: true },
       { key: 'materialCode', label: '物料编码', required: true },
       { key: 'materialName', label: '物料名称', required: true },
       { key: 'warehouseCode', label: '仓库编码', required: true },
@@ -286,7 +280,7 @@ const lineColumns = [
   { title: '单位', dataIndex: 'unit' },
 ];
 const editLineColumns = [
-  { title: '物料ID', key: 'materialId', width: 90 },
+  { title: '物料', key: 'material', width: 220 },
   { title: '物料编码', key: 'materialCode' },
   { title: '物料名称', key: 'materialName' },
   { title: '单位', key: 'unit', width: 90 },
@@ -366,6 +360,22 @@ function addLine() {
     orderQuantity: null,
     unitPrice: 0,
   });
+}
+function materialLabel(line) {
+  return line.materialCode ? `${line.materialCode} ${line.materialName || ''}` : '';
+}
+function selectOrderMaterial(line, material) {
+  if (!material) {
+    line.materialCode = '';
+    line.materialName = '';
+    line.spec = '';
+    line.unit = '';
+    return;
+  }
+  line.materialCode = material.materialCode || '';
+  line.materialName = material.materialName || '';
+  line.spec = material.spec || '';
+  line.unit = material.unit || '';
 }
 function validateOrderLines() {
   if (!editLines.value.length) {
