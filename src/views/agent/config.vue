@@ -1,19 +1,19 @@
 <template>
   <div class="app-container">
-    <a-card title="Agent V2 配置说明">
+    <a-card title="智能助手配置说明">
       <a-alert
         type="info"
         :closable="false"
-        title="聊天入口已由 Dify Supervisor + Spring 工具网关接管"
+        title="当前版本只保留 Spring 转发到 Dify 的基础流式聊天"
       />
       <a-descriptions :column="1" bordered class="mt20">
         <a-descriptions-item label="Dify 应用编码">AGENT_SUPERVISOR</a-descriptions-item>
-        <a-descriptions-item label="工具服务密钥">agent.v2.tool_gateway_key</a-descriptions-item>
-        <a-descriptions-item label="工具定义">ruoyi-agent/docs/agent-v2-tools.openapi.yaml</a-descriptions-item>
-        <a-descriptions-item label="Supervisor 提示词">ruoyi-agent/docs/agent-v2-supervisor.md</a-descriptions-item>
+        <a-descriptions-item label="后端入口">POST /agent/chat/stream</a-descriptions-item>
+        <a-descriptions-item label="流式事件">message / metadata / done / error</a-descriptions-item>
+        <a-descriptions-item label="当前范围">基础对话、Dify 会话 ID 续聊、停止生成</a-descriptions-item>
       </a-descriptions>
       <p class="tip">
-        API Key 与工具密钥仅保存在后端。Dify Cloud 必须通过受控 HTTPS 地址访问 Spring 工具网关。
+        API Key 只保存在后端配置表中。工具调用、图表、文件生成和复杂编排暂时冻结，后续按一个小目标一个小目标恢复。
       </p>
     </a-card>
   </div>
