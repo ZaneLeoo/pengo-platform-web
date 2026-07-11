@@ -18,6 +18,8 @@
       <a-button v-if="type !== 'inventory'" type="primary" ghost @click="openAdd"
         >新增{{ title }}</a-button
       >
+      <a-button v-if="type === 'receipt'" @click="openReference">参照采购订单</a-button>
+      <a-button v-if="type === 'inbound'" @click="openReference">参照送货单</a-button>
       <a-button v-if="type !== 'inventory'" danger :disabled="!selected.length" @click="remove"
         >删除</a-button
       >
@@ -34,7 +36,33 @@
     >
       <template #bodyCell="{ column, record }">
         <a-space v-if="column.key === 'action'">
-          <a v-if="type !== 'inventory'" @click="openEdit(record)">编辑</a>
+          <a v-if="type !== 'inventory' && record.status === 'DRAFT'" @click="openEdit(record)"
+            >编辑</a
+          >
+          <a v-if="record.status === 'DRAFT' && type !== 'inventory'" @click="approve(record)"
+            >审核</a
+          >
+          <a v-if="record.status === 'APPROVED' && type !== 'inventory'" @click="unapprove(record)"
+            >弃审</a
+          >
+          <a
+            v-if="
+              type === 'receipt' &&
+              record.status === 'APPROVED' &&
+              record.inspectionStatus === 'PENDING'
+            "
+            @click="openInspection(record)"
+            >质检</a
+          >
+          <a
+            v-if="
+              type === 'receipt' &&
+              record.status === 'APPROVED' &&
+              record.inspectionStatus !== 'PENDING'
+            "
+            @click="uninspect(record)"
+            >反质检</a
+          >
           <a @click="openDetail(record)">详情</a>
         </a-space>
       </template>
@@ -60,6 +88,7 @@
                 v-else-if="field.type === 'status'"
                 v-model:value="form[field.key]"
                 :options="field.options"
+                :disabled="field.readonly"
               />
               <a-input-number
                 v-else-if="field.type === 'number'"
@@ -115,6 +144,57 @@
           </template>
         </a-table>
       </template>
+      <template v-else-if="type === 'receipt'">
+        <a-divider>送货明细</a-divider>
+        <a-table
+          :data-source="editLines"
+          :columns="receiptLineColumns"
+          row-key="_key"
+          :pagination="false"
+          size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <a-input-number
+              v-if="column.key === 'receivedQuantity'"
+              v-model:value="record.receivedQuantity"
+              :min="0.000001"
+              :max="record.remainingQuantity"
+              style="width: 100%"
+            />
+            <a-input
+              v-else-if="column.key === 'warehouseCode'"
+              v-model:value="record.warehouseCode"
+              placeholder="请输入仓库编码"
+            />
+            <span v-else-if="column.key === 'remainingQuantity'">{{
+              record.remainingQuantity
+            }}</span>
+          </template>
+        </a-table>
+      </template>
+      <template v-else-if="type === 'inbound'">
+        <a-divider>入库明细</a-divider>
+        <a-table
+          :data-source="editLines"
+          :columns="inboundLineColumns"
+          row-key="_key"
+          :pagination="false"
+          size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <a-input-number
+              v-if="column.key === 'inboundQuantity'"
+              v-model:value="record.inboundQuantity"
+              :min="0.000001"
+              :max="record.remainingQuantity"
+              style="width: 100%"
+            />
+            <span v-else-if="column.key === 'remainingQuantity'">{{
+              record.remainingQuantity
+            }}</span>
+          </template>
+        </a-table>
+      </template>
     </a-modal>
 
     <a-drawer v-model:open="detailOpen" :title="`${title}详情`" width="760px">
@@ -131,6 +211,50 @@
         row-key="id"
       />
     </a-drawer>
+
+    <a-modal
+      v-model:open="referenceOpen"
+      :title="type === 'receipt' ? '参照采购订单' : '参照送货单'"
+      width="1100px"
+      @ok="confirmReference"
+    >
+      <a-table
+        :data-source="referenceRows"
+        :columns="referenceColumns"
+        row-key="_referenceKey"
+        :loading="referenceLoading"
+        :pagination="false"
+        :row-selection="{
+          selectedRowKeys: referenceSelected,
+          onChange: (keys) => (referenceSelected = keys),
+        }"
+      />
+    </a-modal>
+
+    <a-modal v-model:open="inspectionOpen" title="送货单质检" width="760px" @ok="submitInspection">
+      <a-alert
+        message="合格数量与不合格数量之和必须等于到货数量。"
+        type="info"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <a-table
+        :data-source="inspectionLines"
+        :columns="inspectionColumns"
+        row-key="receiptLineId"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <a-input-number
+            v-if="column.key === 'qualifiedQuantity' || column.key === 'rejectedQuantity'"
+            v-model:value="record[column.key]"
+            :min="0"
+            :max="record.receivedQuantity"
+            style="width: 100%"
+          />
+        </template>
+      </a-table>
+    </a-modal>
   </a-card>
 </template>
 
@@ -143,6 +267,16 @@ import {
   purchaseReceiptApi,
   purchaseInboundApi,
   inventoryBalanceApi,
+  approvePurchaseOrder,
+  unapprovePurchaseOrder,
+  approvePurchaseReceipt,
+  unapprovePurchaseReceipt,
+  inspectPurchaseReceipt,
+  uninspectPurchaseReceipt,
+  listReceiptReferenceLines,
+  approvePurchaseInbound,
+  unapprovePurchaseInbound,
+  listInboundReferenceLines,
 } from '@/api/mes/purchase';
 import MaterialPicker from '@/components/MaterialPicker.vue';
 
@@ -157,20 +291,15 @@ const type = computed(() => {
 
 const orderStatuses = [
   { value: 'DRAFT', label: '草稿' },
-  { value: 'SUBMITTED', label: '已提交' },
   { value: 'APPROVED', label: '已审核' },
-  { value: 'CANCELLED', label: '已取消' },
 ];
 const receiptStatuses = [
   { value: 'DRAFT', label: '草稿' },
-  { value: 'CONFIRMED', label: '已确认' },
-  { value: 'CANCELLED', label: '已取消' },
+  { value: 'APPROVED', label: '已审核' },
 ];
 const inboundStatuses = [
   { value: 'DRAFT', label: '草稿' },
-  { value: 'CONFIRMED', label: '已确认' },
-  { value: 'POSTED', label: '已过账' },
-  { value: 'CANCELLED', label: '已取消' },
+  { value: 'APPROVED', label: '已审核' },
 ];
 const inventoryStatuses = [
   { value: 'NORMAL', label: '正常' },
@@ -194,7 +323,14 @@ const configs = {
       { key: 'supplierName', label: '供应商', required: true },
       { key: 'orderDate', label: '订单日期', type: 'date', required: true },
       { key: 'expectedDate', label: '预计到货日期', type: 'date' },
-      { key: 'status', label: '状态', type: 'status', options: orderStatuses, required: true },
+      {
+        key: 'status',
+        label: '状态',
+        type: 'status',
+        options: orderStatuses,
+        required: true,
+        readonly: true,
+      },
       { key: 'totalQuantity', label: '总数量', type: 'number', readonly: true },
       { key: 'totalAmount', label: '总金额', type: 'number', readonly: true },
     ],
@@ -205,17 +341,25 @@ const configs = {
     api: purchaseReceiptApi,
     fields: [
       { key: 'receiptCode', label: '到货单号', required: true },
-      { key: 'supplierName', label: '供应商' },
+      { key: 'supplierName', label: '供应商', required: true },
       { key: 'receiptDate', label: '到货日期', type: 'date', required: true },
-      { key: 'status', label: '状态', type: 'status', options: receiptStatuses, required: true },
+      {
+        key: 'status',
+        label: '状态',
+        type: 'status',
+        options: receiptStatuses,
+        required: true,
+        readonly: true,
+      },
       {
         key: 'inspectionStatus',
         label: '检验状态',
         type: 'status',
         options: inspectionStatuses,
         required: true,
+        readonly: true,
       },
-      { key: 'totalQuantity', label: '到货总数量', type: 'number', required: true },
+      { key: 'totalQuantity', label: '到货总数量', type: 'number', required: true, readonly: true },
     ],
   },
   inbound: {
@@ -226,8 +370,15 @@ const configs = {
       { key: 'inboundCode', label: '入库单号', required: true },
       { key: 'inboundDate', label: '入库日期', type: 'date', required: true },
       { key: 'warehouseCode', label: '入库仓库', required: true },
-      { key: 'status', label: '状态', type: 'status', options: inboundStatuses, required: true },
-      { key: 'totalQuantity', label: '入库总数量', type: 'number', required: true },
+      {
+        key: 'status',
+        label: '状态',
+        type: 'status',
+        options: inboundStatuses,
+        required: true,
+        readonly: true,
+      },
+      { key: 'totalQuantity', label: '入库总数量', type: 'number', required: true, readonly: true },
     ],
   },
   inventory: {
@@ -273,12 +424,39 @@ const columns = computed(() =>
     .map((field) => ({ title: field.label, dataIndex: field.key, key: field.key }))
     .concat([{ title: '操作', key: 'action', fixed: 'right' }])
 );
-const lineColumns = [
-  { title: '物料编码', dataIndex: 'materialCode' },
-  { title: '物料名称', dataIndex: 'materialName' },
-  { title: '数量', dataIndex: 'orderQuantity' },
-  { title: '单位', dataIndex: 'unit' },
-];
+const lineColumns = computed(() => {
+  if (type.value === 'receipt') {
+    return [
+      { title: '来源订单', dataIndex: 'sourceOrderCode' },
+      { title: '物料编码', dataIndex: 'materialCode' },
+      { title: '物料名称', dataIndex: 'materialName' },
+      { title: '到货数量', dataIndex: 'receivedQuantity' },
+      { title: '合格数量', dataIndex: 'qualifiedQuantity' },
+      { title: '不合格数量', dataIndex: 'rejectedQuantity' },
+      { title: '仓库', dataIndex: 'warehouseCode' },
+      { title: '单位', dataIndex: 'unit' },
+    ];
+  }
+  if (type.value === 'inbound') {
+    return [
+      { title: '来源到货单', dataIndex: 'sourceReceiptCode' },
+      { title: '物料编码', dataIndex: 'materialCode' },
+      { title: '物料名称', dataIndex: 'materialName' },
+      { title: '入库数量', dataIndex: 'inboundQuantity' },
+      { title: '仓库', dataIndex: 'warehouseCode' },
+      { title: '单位', dataIndex: 'unit' },
+    ];
+  }
+  return [
+    { title: '物料编码', dataIndex: 'materialCode' },
+    { title: '物料名称', dataIndex: 'materialName' },
+    { title: '采购数量', dataIndex: 'orderQuantity' },
+    { title: '已到货', dataIndex: 'receivedQuantity' },
+    { title: '已合格', dataIndex: 'qualifiedQuantity' },
+    { title: '已入库', dataIndex: 'inboundQuantity' },
+    { title: '单位', dataIndex: 'unit' },
+  ];
+});
 const editLineColumns = [
   { title: '物料', key: 'material', width: 220 },
   { title: '物料编码', key: 'materialCode' },
@@ -288,18 +466,71 @@ const editLineColumns = [
   { title: '含税单价', key: 'unitPrice', width: 110 },
   { title: '操作', key: 'action', width: 60 },
 ];
+const receiptLineColumns = [
+  { title: '来源订单', dataIndex: 'sourceOrderCode' },
+  { title: '物料编码', dataIndex: 'materialCode' },
+  { title: '物料名称', dataIndex: 'materialName' },
+  { title: '可到货数量', key: 'remainingQuantity' },
+  { title: '本次到货数量', key: 'receivedQuantity', width: 150 },
+  { title: '入库仓库', key: 'warehouseCode', width: 150 },
+  { title: '单位', dataIndex: 'unit' },
+];
+const inboundLineColumns = [
+  { title: '来源送货单', dataIndex: 'sourceReceiptCode' },
+  { title: '来源订单', dataIndex: 'sourceOrderCode' },
+  { title: '物料编码', dataIndex: 'materialCode' },
+  { title: '物料名称', dataIndex: 'materialName' },
+  { title: '可入库数量', key: 'remainingQuantity' },
+  { title: '本次入库数量', key: 'inboundQuantity', width: 150 },
+  { title: '单位', dataIndex: 'unit' },
+];
+const inspectionColumns = [
+  { title: '物料编码', dataIndex: 'materialCode' },
+  { title: '物料名称', dataIndex: 'materialName' },
+  { title: '到货数量', dataIndex: 'receivedQuantity' },
+  { title: '合格数量', key: 'qualifiedQuantity' },
+  { title: '不合格数量', key: 'rejectedQuantity' },
+  { title: '单位', dataIndex: 'unit' },
+];
 
 const rows = ref([]);
 const loading = ref(false);
 const selected = ref([]);
 const formOpen = ref(false);
 const detailOpen = ref(false);
+const referenceOpen = ref(false);
+const referenceLoading = ref(false);
+const referenceRows = ref([]);
+const referenceSelected = ref([]);
+const inspectionOpen = ref(false);
+const inspectionReceiptId = ref();
+const inspectionLines = ref([]);
 const editing = ref(false);
 const detail = ref({});
 const editLines = ref([]);
 const form = reactive({});
 const query = reactive({ code: '', warehouseCode: '' });
 const pagination = reactive({ current: 1, pageSize: 10, total: 0, showSizeChanger: true });
+const referenceColumns = computed(() =>
+  type.value === 'receipt'
+    ? [
+        { title: '采购订单', dataIndex: 'sourceOrderCode' },
+        { title: '供应商', dataIndex: 'supplierName' },
+        { title: '物料编码', dataIndex: 'materialCode' },
+        { title: '物料名称', dataIndex: 'materialName' },
+        { title: '剩余可到货', dataIndex: 'remainingQuantity' },
+        { title: '单位', dataIndex: 'unit' },
+      ]
+    : [
+        { title: '送货单', dataIndex: 'sourceReceiptCode' },
+        { title: '采购订单', dataIndex: 'sourceOrderCode' },
+        { title: '物料编码', dataIndex: 'materialCode' },
+        { title: '物料名称', dataIndex: 'materialName' },
+        { title: '剩余可入库', dataIndex: 'remainingQuantity' },
+        { title: '仓库', dataIndex: 'warehouseCode' },
+        { title: '单位', dataIndex: 'unit' },
+      ]
+);
 
 async function load() {
   loading.value = true;
@@ -334,8 +565,12 @@ function openAdd() {
   fields.value.forEach((field) => {
     form[field.key] = field.type === 'number' ? 0 : '';
   });
-  form.orderDate = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  form.orderDate = today;
+  form.receiptDate = today;
+  form.inboundDate = today;
   form.status = type.value === 'inventory' ? 'NORMAL' : 'DRAFT';
+  form.inspectionStatus = 'PENDING';
   form.currency = 'CNY';
   editLines.value = [];
   formOpen.value = true;
@@ -347,6 +582,12 @@ async function openEdit(row) {
   editLines.value = (result.data?.lines || []).map((line, index) => ({
     ...line,
     _key: line.id || `new-${index}`,
+    remainingQuantity:
+      type.value === 'receipt'
+        ? line.receivedQuantity
+        : type.value === 'inbound'
+          ? line.inboundQuantity
+          : undefined,
   }));
   formOpen.value = true;
 }
@@ -397,6 +638,28 @@ function validateOrderLines() {
   }
   return true;
 }
+function validateReferenceLines() {
+  if (!editLines.value.length) {
+    message.error('请先通过参照功能选择来源明细');
+    return false;
+  }
+  const quantityKey = type.value === 'receipt' ? 'receivedQuantity' : 'inboundQuantity';
+  const invalid = editLines.value.find(
+    (line) =>
+      Number(line[quantityKey]) <= 0 ||
+      Number(line[quantityKey]) > Number(line.remainingQuantity) ||
+      (type.value === 'receipt' && !String(line.warehouseCode || '').trim())
+  );
+  if (invalid) {
+    message.error(
+      type.value === 'receipt'
+        ? '到货数量必须大于0且不能超过来源订单剩余数量，并填写入库仓库'
+        : '入库数量必须大于0且不能超过合格未入库数量'
+    );
+    return false;
+  }
+  return true;
+}
 async function save() {
   try {
     await formRef.value.validate();
@@ -404,6 +667,7 @@ async function save() {
     return;
   }
   if (type.value === 'order' && !validateOrderLines()) return;
+  if ((type.value === 'receipt' || type.value === 'inbound') && !validateReferenceLines()) return;
   const payload = { ...form };
   if (type.value === 'order') {
     payload.lines = editLines.value.map(({ _key, ...line }, index) => ({
@@ -416,6 +680,26 @@ async function save() {
     );
     payload.totalAmount = payload.lines.reduce(
       (sum, line) => sum + Number(line.orderQuantity || 0) * Number(line.unitPrice || 0),
+      0
+    );
+  }
+  if (type.value === 'receipt') {
+    payload.lines = editLines.value.map(({ _key, remainingQuantity, ...line }, index) => ({
+      ...line,
+      lineNo: index + 1,
+    }));
+    payload.totalQuantity = payload.lines.reduce(
+      (sum, line) => sum + Number(line.receivedQuantity || 0),
+      0
+    );
+  }
+  if (type.value === 'inbound') {
+    payload.lines = editLines.value.map(({ _key, remainingQuantity, ...line }, index) => ({
+      ...line,
+      lineNo: index + 1,
+    }));
+    payload.totalQuantity = payload.lines.reduce(
+      (sum, line) => sum + Number(line.inboundQuantity || 0),
       0
     );
   }
@@ -433,6 +717,135 @@ async function remove() {
   await config.value.api.remove(selected.value.join(','));
   message.success('删除成功');
   selected.value = [];
+  load();
+}
+async function approve(record) {
+  const action =
+    type.value === 'order'
+      ? approvePurchaseOrder
+      : type.value === 'receipt'
+        ? approvePurchaseReceipt
+        : approvePurchaseInbound;
+  await action(record.id);
+  message.success('审核成功');
+  load();
+}
+async function unapprove(record) {
+  const action =
+    type.value === 'order'
+      ? unapprovePurchaseOrder
+      : type.value === 'receipt'
+        ? unapprovePurchaseReceipt
+        : unapprovePurchaseInbound;
+  await action(record.id);
+  message.success('弃审成功');
+  load();
+}
+async function openReference() {
+  referenceLoading.value = true;
+  referenceSelected.value = [];
+  try {
+    const result =
+      type.value === 'receipt'
+        ? await listReceiptReferenceLines()
+        : await listInboundReferenceLines();
+    referenceRows.value = (result.data || []).map((row, index) => ({
+      ...row,
+      _referenceKey:
+        type.value === 'receipt'
+          ? `o-${row.sourceOrderLineId}`
+          : `r-${row.sourceReceiptLineId}-${index}`,
+    }));
+    referenceOpen.value = true;
+  } finally {
+    referenceLoading.value = false;
+  }
+}
+function confirmReference() {
+  const selectedRows = referenceRows.value.filter((row) =>
+    referenceSelected.value.includes(row._referenceKey)
+  );
+  if (!selectedRows.length) {
+    message.error('请选择至少一条来源明细');
+    return;
+  }
+  if (type.value === 'receipt') {
+    const suppliers = new Set(selectedRows.map((row) => row.supplierCode || row.supplierName));
+    if (suppliers.size > 1) {
+      message.error('一张送货单只能参照同一供应商的订单明细');
+      return;
+    }
+    openAdd();
+    form.supplierCode = selectedRows[0].supplierCode;
+    form.supplierName = selectedRows[0].supplierName;
+    editLines.value = selectedRows.map((row, index) => ({
+      ...row,
+      _key: row._referenceKey,
+      lineNo: index + 1,
+      receivedQuantity: row.remainingQuantity,
+      qualifiedQuantity: 0,
+      rejectedQuantity: 0,
+      pendingQuantity: 0,
+      inboundQuantity: 0,
+    }));
+  } else {
+    const warehouses = new Set(selectedRows.map((row) => row.warehouseCode));
+    if (warehouses.size > 1) {
+      message.error('一张入库单只能参照同一仓库的送货明细');
+      return;
+    }
+    openAdd();
+    form.warehouseCode = selectedRows[0].warehouseCode;
+    form.warehouseName = selectedRows[0].warehouseName;
+    editLines.value = selectedRows.map((row, index) => ({
+      ...row,
+      _key: row._referenceKey,
+      lineNo: index + 1,
+      inboundQuantity: row.remainingQuantity,
+    }));
+  }
+  referenceOpen.value = false;
+}
+async function openInspection(record) {
+  const result = await purchaseReceiptApi.get(record.id);
+  inspectionReceiptId.value = record.id;
+  inspectionLines.value = (result.data?.lines || []).map((line) => ({
+    receiptLineId: line.id,
+    materialCode: line.materialCode,
+    materialName: line.materialName,
+    unit: line.unit,
+    receivedQuantity: line.receivedQuantity,
+    qualifiedQuantity: line.receivedQuantity,
+    rejectedQuantity: 0,
+  }));
+  inspectionOpen.value = true;
+}
+async function submitInspection() {
+  const invalid = inspectionLines.value.find(
+    (line) =>
+      Number(line.qualifiedQuantity) < 0 ||
+      Number(line.rejectedQuantity) < 0 ||
+      Number(line.qualifiedQuantity) + Number(line.rejectedQuantity) !==
+        Number(line.receivedQuantity)
+  );
+  if (invalid) {
+    message.error('每条明细的合格数量与不合格数量之和必须等于到货数量');
+    return;
+  }
+  await inspectPurchaseReceipt(inspectionReceiptId.value, {
+    lines: inspectionLines.value.map((line) => ({
+      receiptLineId: line.receiptLineId,
+      qualifiedQuantity: line.qualifiedQuantity,
+      rejectedQuantity: line.rejectedQuantity,
+    })),
+  });
+  message.success('质检确认成功');
+  inspectionOpen.value = false;
+  load();
+}
+async function uninspect(record) {
+  await uninspectPurchaseReceipt(record.id);
+  message.success('反质检成功');
   load();
 }
 onMounted(load);
