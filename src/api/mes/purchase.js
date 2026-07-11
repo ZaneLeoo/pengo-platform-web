@@ -1,0 +1,3 @@
+import request from '@/utils/request'
+const api = (url) => ({ list: q => request({ url: `/mes/purchase/${url}/list`, method: 'get', params: q }), get: id => request({ url: `/mes/purchase/${url}/${id}`, method: 'get' }), add: data => request({ url: `/mes/purchase/${url}`, method: 'post', data }), update: data => request({ url: `/mes/purchase/${url}`, method: 'put', data }), remove: ids => request({ url: `/mes/purchase/${url}/${ids}`, method: 'delete' }) })
+export const purchaseOrderApi = api('order'); export const purchaseReceiptApi = api('receipt'); export const purchaseInboundApi = api('inbound'); export const inventoryBalanceApi = api('inventory')
