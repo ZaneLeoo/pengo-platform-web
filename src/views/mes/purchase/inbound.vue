@@ -167,6 +167,7 @@ const editLineColumns = [
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '可入库数量', key: 'remainingQuantity' },
   { title: '本次入库数量', key: 'inboundQuantity', width: 150 },
+  { title: '入库仓库', dataIndex: 'warehouseCode' },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -176,7 +177,8 @@ const refColumns = [
   { title: '物料编码', dataIndex: 'materialCode' },
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '剩余可入库', dataIndex: 'remainingQuantity' },
-  { title: '仓库', dataIndex: 'warehouseCode' },
+  { title: '入库仓库', dataIndex: 'warehouseCode' },
+  { title: '库位', dataIndex: 'locationCode' },
   { title: '单位', dataIndex: 'unit' },
 ]
 
