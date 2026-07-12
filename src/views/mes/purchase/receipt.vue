@@ -45,7 +45,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="供应商" name="supplierCode">
-              <SupplierPicker v-model="form.supplierId" :label="supplierLabel" @select="onSupplierSelect" placeholder="请选择供应商" />
+              <SupplierPicker v-model="form.supplierId" :label="supplierLabel" @select="onSupplierSelect" :disabled="isReference" placeholder="请选择供应商" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -143,6 +143,7 @@ const inspectionOpen = ref(false)
 const inspectionReceiptId = ref()
 const inspectionLines = ref([])
 const editing = ref(false)
+const isReference = ref(false)
 const detail = ref({})
 const editLines = ref([])
 const form = reactive({})
@@ -240,6 +241,7 @@ const formRules = {
 // ==================== 新增/编辑 ====================
 function openAdd() {
   editing.value = false
+  isReference.value = false
   Object.keys(form).forEach(k => delete form[k])
   form.receiptCode = '';
   form.supplierId = null
@@ -332,6 +334,7 @@ function confirmReference() {
   if (!selected.length) { message.error('请选择至少一条来源明细'); return }
   const suppliers = new Set(selected.map(r => r.supplierCode || r.supplierName))
   if (suppliers.size > 1) { message.error('一张送货单只能参照同一供应商的订单明细'); return }
+  isReference.value = true
   openAdd()
   form.supplierCode = selected[0].supplierCode
   form.supplierName = selected[0].supplierName
