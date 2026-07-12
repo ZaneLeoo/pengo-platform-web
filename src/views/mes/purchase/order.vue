@@ -138,6 +138,7 @@ const columns = [
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100 },
   { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120 },
+  { title: '单据类型', dataIndex: 'billType', key: 'billType', width: 90 },
   { title: '操作', key: 'action', width: 200, fixed: 'right' },
 ]
 
@@ -178,6 +179,7 @@ function openAdd() {
   form.expectedDate = ''
   form.status = 'DRAFT'
   form.currency = 'CNY'
+  form.billType = 'NORMAL'
   editLines.value = []
   formOpen.value = true
 }

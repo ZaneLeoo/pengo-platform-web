@@ -162,6 +162,7 @@ const columns = [
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '检验状态', dataIndex: 'inspectionStatus', key: 'inspectionStatus', width: 100 },
   { title: '到货总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100 },
+  { title: '单据类型', dataIndex: 'billType', key: 'billType', width: 90 },
   { title: '操作', key: 'action', width: 260, fixed: 'right' },
 ]
 
@@ -219,6 +220,7 @@ function openAdd() {
   form.receiptCode = ''; form.supplierName = ''
   form.receiptDate = new Date().toISOString().slice(0, 10)
   form.status = 'DRAFT'; form.inspectionStatus = 'PENDING'
+  form.billType = 'DIRECT'
   editLines.value = []
   formOpen.value = true
 }
@@ -297,6 +299,7 @@ function confirmReference() {
   openAdd()
   form.supplierCode = selected[0].supplierCode
   form.supplierName = selected[0].supplierName
+  form.billType = 'PURCHASE_ORDER'
   editLines.value = selected.map((row, i) => ({
     ...row, _key: row._refKey, lineNo: i + 1, receivedQuantity: row.remainingQuantity,
     qualifiedQuantity: 0, rejectedQuantity: 0, pendingQuantity: 0, inboundQuantity: 0,

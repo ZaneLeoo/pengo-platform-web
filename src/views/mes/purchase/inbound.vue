@@ -127,6 +127,7 @@ const columns = [
   { title: '入库仓库', dataIndex: 'warehouseCode', key: 'warehouseCode', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '入库总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100 },
+  { title: '单据类型', dataIndex: 'billType', key: 'billType', width: 90 },
   { title: '操作', key: 'action', width: 200, fixed: 'right' },
 ]
 
@@ -172,6 +173,7 @@ function openAdd() {
   Object.keys(form).forEach(k => delete form[k])
   form.inboundCode = ''; form.inboundDate = new Date().toISOString().slice(0, 10)
   form.warehouseCode = ''; form.status = 'DRAFT'
+  form.billType = 'DIRECT'
   editLines.value = []
   formOpen.value = true
 }
@@ -249,6 +251,7 @@ function confirmReference() {
   openAdd()
   form.warehouseCode = selected[0].warehouseCode
   form.warehouseName = selected[0].warehouseName
+  form.billType = 'RECEIPT'
   editLines.value = selected.map((row, i) => ({
     ...row, _key: row._refKey, lineNo: i + 1, inboundQuantity: row.remainingQuantity,
   }))
