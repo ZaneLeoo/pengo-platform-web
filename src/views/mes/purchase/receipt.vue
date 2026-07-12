@@ -44,7 +44,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="供应商" name="supplierId">
+            <a-form-item label="供应商" name="supplierCode">
               <SupplierPicker v-model="form.supplierId" :label="supplierLabel" @select="onSupplierSelect" placeholder="请选择供应商" />
             </a-form-item>
           </a-col>
@@ -231,7 +231,7 @@ const inspectionColumns = [
 
 const formRules = {
   receiptCode: [{ required: true, message: '请输入到货单号', trigger: 'blur' }],
-  supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+  supplierCode: [{ required: true, message: '请选择供应商', trigger: 'change', validator: (_r, v) => v ? Promise.resolve() : Promise.reject('请选择供应商') }],
   receiptDate: [{ required: true, message: '请选择到货日期', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
   inspectionStatus: [{ required: true, message: '请选择检验状态', trigger: 'change' }],
@@ -246,6 +246,7 @@ function openAdd() {
   form.supplierCode = ''
   form.supplierName = ''
   form.receiptDate = new Date().toISOString().slice(0, 10)
+  editLines.value = []
   form.status = 'DRAFT'; form.inspectionStatus = 'PENDING'
   form.billType = 'DIRECT'
   editLines.value = []
