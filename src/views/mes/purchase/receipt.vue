@@ -70,7 +70,7 @@
       <a-table :data-source="editLines" :columns="editLineColumns" row-key="_key" :pagination="false" size="small">
         <template #bodyCell="{ column, record }">
           <a-input-number v-if="column.key === 'receivedQuantity'" v-model:value="record.receivedQuantity" :min="0.000001" :max="record.remainingQuantity" style="width:100%" />
-          <a-input v-else-if="column.key === 'warehouseCode'" v-model:value="record.warehouseCode" placeholder="请输入仓库编码" />
+          <WarehousePicker v-else-if="column.key === 'warehouseCode'" v-model="record.warehouseId" :label="wareLabel(record)" @select="(w) => onLineWareSelect(record, w)" />
           <span v-else-if="column.key === 'remainingQuantity'">{{ record.remainingQuantity }}</span>
         </template>
       </a-table>
@@ -207,7 +207,7 @@ const editLineColumns = [
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '可到货数量', key: 'remainingQuantity' },
   { title: '本次到货数量', key: 'receivedQuantity', width: 150 },
-  { title: '建议入库仓库', key: 'warehouseCode', width: 150 },
+  { title: '入库仓库', key: 'warehouseCode', width: 150 },
   { title: '单位', dataIndex: 'unit' },
 ]
 
