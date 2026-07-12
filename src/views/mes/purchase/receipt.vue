@@ -206,7 +206,7 @@ const editLineColumns = [
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '可到货数量', key: 'remainingQuantity' },
   { title: '本次到货数量', key: 'receivedQuantity', width: 150 },
-  { title: '入库仓库', key: 'warehouseCode', width: 150 },
+  { title: '建议入库仓库', key: 'warehouseCode', width: 150 },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -267,10 +267,9 @@ async function save() {
   try { await formRef.value.validate() } catch { return }
   if (!editLines.value.length) { message.error('请先通过参照功能选择来源明细'); return }
   const invalid = editLines.value.find(l =>
-    Number(l.receivedQuantity) <= 0 || Number(l.receivedQuantity) > Number(l.remainingQuantity) ||
-    !String(l.warehouseCode || '').trim()
+    Number(l.receivedQuantity) <= 0 || Number(l.receivedQuantity) > Number(l.remainingQuantity)
   )
-  if (invalid) { message.error('到货数量必须大于0且不能超过来源订单剩余数量，并填写入库仓库'); return }
+  if (invalid) { message.error('到货数量必须大于0且不能超过来源订单剩余数量'); return }
 
   const payload = { ...form }
   payload.lines = editLines.value.map(({ _key, remainingQuantity, ...l }, i) => ({ ...l, lineNo: i + 1 }))
