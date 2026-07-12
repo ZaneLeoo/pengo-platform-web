@@ -1,22 +1,17 @@
 <template>
-  <a-card :bordered="false">
-    <a-space class="search-bar">
-      <a-input v-model:value="query.code" placeholder="订单编号/物料编码" allow-clear @pressEnter="load" />
-      <a-button type="primary" @click="load">查询</a-button>
-      <a-button @click="reset">重置</a-button>
-      <a-button v-hasPermi="['mes:purchaseOrder:add']" type="primary" ghost @click="openAdd">新增采购订单</a-button>
-      <a-button v-hasPermi="['mes:purchaseOrder:remove']" danger :disabled="!selected.length" @click="remove">删除</a-button>
-    </a-space>
-
-    <a-table
-      :loading="loading"
-      :data-source="rows"
+  <div>
+    <ProTable
+      ref="proTableRef"
+      :api="tableApi"
       :columns="columns"
-      row-key="id"
-      :pagination="pagination"
-      :row-selection="{ selectedRowKeys: selected, onChange: (keys) => (selected = keys) }"
-      @change="pageChange"
+      :searchFields="searchFields"
+      rowKey="id"
     >
+      <template #actions="{ selectedRowKeys, selectedRows }">
+        <a-button type="primary" @click="openAdd" v-hasPermi="['mes:purchaseOrder:add']">新增采购订单</a-button>
+        <a-button :disabled="selectedRowKeys.length !== 1" @click="openEditById(selectedRows[0])" v-hasPermi="['mes:purchaseOrder:edit']">修改</a-button>
+        <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:purchaseOrder:remove']">删除</a-button>
+      </template>
       <template #bodyCell="{ column, record }">
         <a-space v-if="column.key === 'action'">
           <a v-if="record.status === 'DRAFT'" v-hasPermi="['mes:purchaseOrder:edit']" @click="openEdit(record)">编辑</a>
@@ -25,7 +20,7 @@
           <a v-hasPermi="['mes:purchaseOrder:query']" @click="openDetail(record)">详情</a>
         </a-space>
       </template>
-    </a-table>
+    </ProTable>
 
     <!-- 新增/编辑弹窗 -->
     <a-modal v-model:open="formOpen" :title="editing ? '编辑采购订单' : '新增采购订单'" width="980px" @ok="save">
@@ -43,12 +38,12 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="订单日期" name="orderDate">
-              <a-date-picker v-model:value="form.orderDate" value-format="YYYY-MM-DD" style="width: 100%" />
+              <a-date-picker v-model:value="form.orderDate" value-format="YYYY-MM-DD" style="width:100%" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="预计到货日期">
-              <a-date-picker v-model:value="form.expectedDate" value-format="YYYY-MM-DD" style="width: 100%" />
+              <a-date-picker v-model:value="form.expectedDate" value-format="YYYY-MM-DD" style="width:100%" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -73,13 +68,13 @@
             v-model="record.materialId"
             :label="materialLabel(record)"
             placeholder="请选择物料"
-            @select="(material) => selectOrderMaterial(record, material)"
+            @select="(m) => selectMaterial(record, m)"
           />
           <span v-else-if="column.key === 'materialCode'">{{ record.materialCode || '-' }}</span>
           <span v-else-if="column.key === 'materialName'">{{ record.materialName || '-' }}</span>
           <a-input v-else-if="column.key === 'unit'" v-model:value="record.unit" placeholder="单位" />
-          <a-input-number v-else-if="column.key === 'orderQuantity'" v-model:value="record.orderQuantity" :min="0" style="width: 100%" />
-          <a-input-number v-else-if="column.key === 'unitPrice'" v-model:value="record.unitPrice" :min="0" style="width: 100%" />
+          <a-input-number v-else-if="column.key === 'orderQuantity'" v-model:value="record.orderQuantity" :min="0" style="width:100%" />
+          <a-input-number v-else-if="column.key === 'unitPrice'" v-model:value="record.unitPrice" :min="0" style="width:100%" />
           <a v-else-if="column.key === 'action'" @click="editLines.splice(index, 1)">删除</a>
         </template>
       </a-table>
@@ -100,43 +95,51 @@
       <a-divider v-if="detail.lines">明细</a-divider>
       <a-table v-if="detail.lines" :data-source="detail.lines" :columns="lineColumns" row-key="id" :pagination="false" size="small" />
     </a-drawer>
-  </a-card>
+  </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
-import { message } from 'ant-design-vue';
-import { purchaseOrderApi, approvePurchaseOrder, unapprovePurchaseOrder } from '@/api/mes/purchase/order';
-import MaterialPicker from '@/components/MaterialPicker.vue';
+import { reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
+import ProTable from '@/components/BearJiaProTable/index.vue'
+import MaterialPicker from '@/components/MaterialPicker.vue'
+import { purchaseOrderApi, approvePurchaseOrder, unapprovePurchaseOrder } from '@/api/mes/purchase/order'
 
-const formRef = ref();
-const rows = ref([]);
-const loading = ref(false);
-const selected = ref([]);
-const formOpen = ref(false);
-const detailOpen = ref(false);
-const editing = ref(false);
-const detail = ref({});
-const editLines = ref([]);
-const form = reactive({});
-const query = reactive({ code: '' });
-const pagination = reactive({ current: 1, pageSize: 10, total: 0, showSizeChanger: true });
+const proTableRef = ref()
+const formRef = ref()
+const formOpen = ref(false)
+const detailOpen = ref(false)
+const editing = ref(false)
+const detail = ref({})
+const editLines = ref([])
+const form = reactive({})
+
+const tableApi = { list: purchaseOrderApi.list, delete: purchaseOrderApi.remove }
+
+const searchFields = [
+  { name: 'orderCode', label: '订单编号', type: 'input' },
+  { name: 'supplierName', label: '供应商', type: 'input' },
+  { name: 'status', label: '状态', type: 'select', options: [
+    { value: 'DRAFT', label: '草稿' },
+    { value: 'APPROVED', label: '已审核' },
+  ]},
+]
 
 const statusOptions = [
   { value: 'DRAFT', label: '草稿' },
   { value: 'APPROVED', label: '已审核' },
-];
+]
 
 const columns = [
-  { title: '订单编号', dataIndex: 'orderCode', key: 'orderCode' },
-  { title: '供应商', dataIndex: 'supplierName', key: 'supplierName' },
-  { title: '订单日期', dataIndex: 'orderDate', key: 'orderDate' },
-  { title: '预计到货日期', dataIndex: 'expectedDate', key: 'expectedDate' },
-  { title: '状态', dataIndex: 'status', key: 'status' },
-  { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity' },
-  { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount' },
-  { title: '操作', key: 'action', fixed: 'right' },
-];
+  { title: '订单编号', dataIndex: 'orderCode', key: 'orderCode', width: 150 },
+  { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
+  { title: '订单日期', dataIndex: 'orderDate', key: 'orderDate', width: 120 },
+  { title: '预计到货日期', dataIndex: 'expectedDate', key: 'expectedDate', width: 120 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+  { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100 },
+  { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120 },
+  { title: '操作', key: 'action', width: 200, fixed: 'right' },
+]
 
 const lineColumns = [
   { title: '物料编码', dataIndex: 'materialCode' },
@@ -146,7 +149,7 @@ const lineColumns = [
   { title: '已合格', dataIndex: 'qualifiedQuantity' },
   { title: '已入库', dataIndex: 'inboundQuantity' },
   { title: '单位', dataIndex: 'unit' },
-];
+]
 
 const editLineColumns = [
   { title: '物料', key: 'material', width: 220 },
@@ -156,160 +159,104 @@ const editLineColumns = [
   { title: '采购数量', key: 'orderQuantity', width: 110 },
   { title: '含税单价', key: 'unitPrice', width: 110 },
   { title: '操作', key: 'action', width: 60 },
-];
+]
 
 const formRules = {
   orderCode: [{ required: true, message: '请输入订单编号', trigger: 'blur' }],
   supplierName: [{ required: true, message: '请输入供应商', trigger: 'blur' }],
   orderDate: [{ required: true, message: '请选择订单日期', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
-};
-
-// ==================== 列表 ====================
-async function load() {
-  loading.value = true;
-  try {
-    const params = { pageNum: pagination.current, pageSize: pagination.pageSize, orderCode: query.code };
-    const result = await purchaseOrderApi.list(params);
-    rows.value = result.rows || [];
-    pagination.total = result.total || 0;
-  } finally {
-    loading.value = false;
-  }
-}
-
-function reset() {
-  query.code = '';
-  pagination.current = 1;
-  load();
-}
-
-function pageChange(page) {
-  pagination.current = page.current;
-  pagination.pageSize = page.pageSize;
-  load();
 }
 
 // ==================== 新增/编辑 ====================
 function openAdd() {
-  editing.value = false;
-  Object.keys(form).forEach((key) => delete form[key]);
-  form.orderCode = '';
-  form.supplierName = '';
-  form.orderDate = new Date().toISOString().slice(0, 10);
-  form.expectedDate = '';
-  form.status = 'DRAFT';
-  form.currency = 'CNY';
-  editLines.value = [];
-  formOpen.value = true;
+  editing.value = false
+  Object.keys(form).forEach(k => delete form[k])
+  form.orderCode = ''
+  form.supplierName = ''
+  form.orderDate = new Date().toISOString().slice(0, 10)
+  form.expectedDate = ''
+  form.status = 'DRAFT'
+  form.currency = 'CNY'
+  editLines.value = []
+  formOpen.value = true
+}
+
+function openEditById(row) {
+  openEdit(row)
 }
 
 async function openEdit(row) {
-  editing.value = true;
-  const result = await purchaseOrderApi.get(row.id);
-  Object.assign(form, result.data || row);
-  editLines.value = (result.data?.lines || []).map((line, index) => ({
-    ...line,
-    _key: line.id || `new-${index}`,
-  }));
-  formOpen.value = true;
+  editing.value = true
+  const result = await purchaseOrderApi.get(row.id)
+  Object.assign(form, result.data || row)
+  editLines.value = (result.data?.lines || []).map((line, i) => ({ ...line, _key: line.id || `new-${i}` }))
+  formOpen.value = true
 }
 
 function addLine() {
   editLines.value.push({
     _key: `new-${Date.now()}`,
-    materialId: null,
-    materialCode: '',
-    materialName: '',
-    unit: '',
-    orderQuantity: null,
-    unitPrice: 0,
-  });
+    materialId: null, materialCode: '', materialName: '', unit: '',
+    orderQuantity: null, unitPrice: 0,
+  })
 }
 
 function materialLabel(line) {
-  return line.materialCode ? `${line.materialCode} ${line.materialName || ''}` : '';
+  return line.materialCode ? `${line.materialCode} ${line.materialName || ''}` : ''
 }
 
-function selectOrderMaterial(line, material) {
-  if (!material) {
-    line.materialCode = '';
-    line.materialName = '';
-    line.spec = '';
-    line.unit = '';
-    return;
-  }
-  line.materialCode = material.materialCode || '';
-  line.materialName = material.materialName || '';
-  line.spec = material.spec || '';
-  line.unit = material.unit || '';
+function selectMaterial(line, material) {
+  if (!material) { line.materialCode = ''; line.materialName = ''; line.spec = ''; line.unit = ''; return }
+  line.materialCode = material.materialCode || ''
+  line.materialName = material.materialName || ''
+  line.spec = material.spec || ''
+  line.unit = material.unit || ''
 }
 
 async function save() {
-  try {
-    await formRef.value.validate();
-  } catch {
-    return;
-  }
-  if (!editLines.value.length) {
-    message.error('采购订单至少需要一条明细');
-    return;
-  }
-  const invalid = editLines.value.find(
-    (line) =>
-      !line.materialId ||
-      !String(line.materialCode || '').trim() ||
-      !String(line.materialName || '').trim() ||
-      !String(line.unit || '').trim() ||
-      Number(line.orderQuantity) <= 0 ||
-      Number(line.unitPrice) < 0
-  );
-  if (invalid) {
-    message.error('请完整填写每条采购明细：物料、单位、采购数量和单价');
-    return;
-  }
+  try { await formRef.value.validate() } catch { return }
+  if (!editLines.value.length) { message.error('采购订单至少需要一条明细'); return }
+  const invalid = editLines.value.find(l =>
+    !l.materialId || !String(l.materialCode || '').trim() || !String(l.materialName || '').trim() ||
+    !String(l.unit || '').trim() || Number(l.orderQuantity) <= 0 || Number(l.unitPrice) < 0
+  )
+  if (invalid) { message.error('请完整填写每条采购明细：物料、单位、采购数量和单价'); return }
 
-  const payload = { ...form };
-  payload.lines = editLines.value.map(({ _key, ...line }, index) => ({ ...line, lineNo: index + 1 }));
-  payload.totalQuantity = payload.lines.reduce((sum, line) => sum + Number(line.orderQuantity || 0), 0);
-  payload.totalAmount = payload.lines.reduce((sum, line) => sum + Number(line.orderQuantity || 0) * Number(line.unitPrice || 0), 0);
+  const payload = { ...form }
+  payload.lines = editLines.value.map(({ _key, ...l }, i) => ({ ...l, lineNo: i + 1 }))
+  payload.totalQuantity = payload.lines.reduce((s, l) => s + Number(l.orderQuantity || 0), 0)
+  payload.totalAmount = payload.lines.reduce((s, l) => s + Number(l.orderQuantity || 0) * Number(l.unitPrice || 0), 0)
 
-  await (editing.value ? purchaseOrderApi.update(payload) : purchaseOrderApi.add(payload));
-  message.success('保存成功');
-  formOpen.value = false;
-  load();
+  await (editing.value ? purchaseOrderApi.update(payload) : purchaseOrderApi.add(payload))
+  message.success('保存成功')
+  formOpen.value = false
+  proTableRef.value?.refresh()
 }
 
 // ==================== 详情 ====================
 async function openDetail(row) {
-  const result = await purchaseOrderApi.get(row.id);
-  detail.value = result.data || row;
-  detailOpen.value = true;
+  const result = await purchaseOrderApi.get(row.id)
+  detail.value = result.data || row
+  detailOpen.value = true
 }
 
 // ==================== 操作 ====================
-async function remove() {
-  await purchaseOrderApi.remove(selected.value.join(','));
-  message.success('删除成功');
-  selected.value = [];
-  load();
+async function handleDelete(ids) {
+  await purchaseOrderApi.remove(ids.join(','))
+  message.success('删除成功')
+  proTableRef.value?.refresh()
 }
 
 async function approve(record) {
-  await approvePurchaseOrder(record.id);
-  message.success('审核成功');
-  load();
+  await approvePurchaseOrder(record.id)
+  message.success('审核成功')
+  proTableRef.value?.refresh()
 }
 
 async function unapprove(record) {
-  await unapprovePurchaseOrder(record.id);
-  message.success('弃审成功');
-  load();
+  await unapprovePurchaseOrder(record.id)
+  message.success('弃审成功')
+  proTableRef.value?.refresh()
 }
-
-onMounted(load);
 </script>
-
-<style scoped>
-.search-bar { margin-bottom: 16px; }
-</style>

@@ -1,28 +1,19 @@
 <template>
-  <a-card :bordered="false">
-    <a-space class="search-bar">
-      <a-input v-model:value="query.code" placeholder="物料编码" allow-clear @pressEnter="load" />
-      <a-input v-model:value="query.warehouseCode" placeholder="仓库编码" allow-clear @pressEnter="load" />
-      <a-button type="primary" @click="load">查询</a-button>
-      <a-button @click="reset">重置</a-button>
-    </a-space>
-
-    <a-table
-      :loading="loading"
-      :data-source="rows"
+  <div>
+    <ProTable
+      ref="proTableRef"
+      :api="tableApi"
       :columns="columns"
-      row-key="id"
-      :pagination="pagination"
-      @change="pageChange"
+      :searchFields="searchFields"
+      rowKey="id"
     >
       <template #bodyCell="{ column, record }">
         <a-space v-if="column.key === 'action'">
           <a v-hasPermi="['mes:inventoryBalance:query']" @click="openDetail(record)">详情</a>
         </a-space>
       </template>
-    </a-table>
+    </ProTable>
 
-    <!-- 详情抽屉 -->
     <a-drawer v-model:open="detailOpen" title="库存详情" width="760px">
       <a-descriptions bordered :column="1">
         <a-descriptions-item label="物料编码">{{ detail.materialCode ?? '-' }}</a-descriptions-item>
@@ -37,73 +28,42 @@
         <a-descriptions-item label="状态">{{ detail.status ?? '-' }}</a-descriptions-item>
       </a-descriptions>
     </a-drawer>
-  </a-card>
+  </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
-import { inventoryBalanceApi } from '@/api/mes/purchase/inventory';
+import { ref } from 'vue'
+import ProTable from '@/components/BearJiaProTable/index.vue'
+import { inventoryBalanceApi } from '@/api/mes/purchase/inventory'
 
-const rows = ref([]);
-const loading = ref(false);
-const detailOpen = ref(false);
-const detail = ref({});
-const query = reactive({ code: '', warehouseCode: '' });
-const pagination = reactive({ current: 1, pageSize: 10, total: 0, showSizeChanger: true });
+const proTableRef = ref()
+const detailOpen = ref(false)
+const detail = ref({})
+
+const tableApi = { list: inventoryBalanceApi.list }
+
+const searchFields = [
+  { name: 'materialCode', label: '物料编码', type: 'input' },
+  { name: 'warehouseCode', label: '仓库编码', type: 'input' },
+]
 
 const columns = [
-  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode' },
-  { title: '物料名称', dataIndex: 'materialName', key: 'materialName' },
-  { title: '仓库编码', dataIndex: 'warehouseCode', key: 'warehouseCode' },
-  { title: '库位编码', dataIndex: 'locationCode', key: 'locationCode' },
-  { title: '批次号', dataIndex: 'lotNo', key: 'lotNo' },
-  { title: '单位', dataIndex: 'unit', key: 'unit' },
-  { title: '库存数量', dataIndex: 'quantity', key: 'quantity' },
-  { title: '可用数量', dataIndex: 'availableQuantity', key: 'availableQuantity' },
-  { title: '锁定数量', dataIndex: 'lockedQuantity', key: 'lockedQuantity' },
-  { title: '状态', dataIndex: 'status', key: 'status' },
-  { title: '操作', key: 'action', fixed: 'right' },
-];
-
-async function load() {
-  loading.value = true;
-  try {
-    const params = {
-      pageNum: pagination.current,
-      pageSize: pagination.pageSize,
-      materialCode: query.code,
-    };
-    if (query.warehouseCode) params.warehouseCode = query.warehouseCode;
-    const result = await inventoryBalanceApi.list(params);
-    rows.value = result.rows || [];
-    pagination.total = result.total || 0;
-  } finally {
-    loading.value = false;
-  }
-}
-
-function reset() {
-  query.code = '';
-  query.warehouseCode = '';
-  pagination.current = 1;
-  load();
-}
-
-function pageChange(page) {
-  pagination.current = page.current;
-  pagination.pageSize = page.pageSize;
-  load();
-}
+  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
+  { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
+  { title: '仓库编码', dataIndex: 'warehouseCode', key: 'warehouseCode', width: 120 },
+  { title: '库位编码', dataIndex: 'locationCode', key: 'locationCode', width: 120 },
+  { title: '批次号', dataIndex: 'lotNo', key: 'lotNo', width: 100 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
+  { title: '库存数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+  { title: '可用数量', dataIndex: 'availableQuantity', key: 'availableQuantity', width: 100 },
+  { title: '锁定数量', dataIndex: 'lockedQuantity', key: 'lockedQuantity', width: 100 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
+  { title: '操作', key: 'action', width: 80, fixed: 'right' },
+]
 
 async function openDetail(row) {
-  const result = await inventoryBalanceApi.get(row.id);
-  detail.value = result.data || row;
-  detailOpen.value = true;
+  const result = await inventoryBalanceApi.get(row.id)
+  detail.value = result.data || row
+  detailOpen.value = true
 }
-
-onMounted(load);
 </script>
-
-<style scoped>
-.search-bar { margin-bottom: 16px; }
-</style>
