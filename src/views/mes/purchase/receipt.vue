@@ -8,7 +8,7 @@
       rowKey="id"
     >
       <template #actions="{ selectedRowKeys, selectedRows }">
-        <a-button type="primary" @click="openAdd" v-hasPermi="['mes:purchaseReceipt:add']">新增到货单</a-button>
+        <a-button type="primary" @click="openAdd(); isReference = false" v-hasPermi="['mes:purchaseReceipt:add']">新增到货单</a-button>
         <a-button type="primary" ghost @click="openReference" v-hasPermi="['mes:purchaseReceipt:reference']">参照采购订单</a-button>
         <a-button :disabled="selectedRowKeys.length !== 1" @click="openEditById(selectedRows[0])" v-hasPermi="['mes:purchaseReceipt:edit']">修改</a-button>
         <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:purchaseReceipt:remove']">删除</a-button>
@@ -241,7 +241,6 @@ const formRules = {
 // ==================== 新增/编辑 ====================
 function openAdd() {
   editing.value = false
-  isReference.value = false
   Object.keys(form).forEach(k => delete form[k])
   form.receiptCode = '';
   form.supplierId = null
