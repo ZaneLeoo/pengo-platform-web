@@ -92,6 +92,7 @@ declare module 'vue' {
     IconSelector: typeof import('./../components/IconSelector/IconSelector.vue')['default']
     ImagePreview: typeof import('./../components/ImagePreview/index.vue')['default']
     ImageUpload: typeof import('./../components/ImageUpload/index.vue')['default']
+    LocationPicker: typeof import('./../components/LocationPicker.vue')['default']
     MaterialPicker: typeof import('./../components/MaterialPicker.vue')['default']
     MessageCenter: typeof import('./../components/common/MessageCenter.vue')['default']
     MixSideMenu: typeof import('./../components/layout/MixSideMenu.vue')['default']
@@ -102,10 +103,12 @@ declare module 'vue' {
     SearchForm: typeof import('./../components/SearchForm/index.vue')['default']
     SettingDrawer: typeof import('./../components/layout/SettingDrawer.vue')['default']
     SideMenu: typeof import('./../components/layout/SideMenu.vue')['default']
+    SupplierPicker: typeof import('./../components/SupplierPicker.vue')['default']
     SvgIcon: typeof import('./../components/SvgIcon/index.vue')['default']
     TableActionBar: typeof import('./../components/TableActionBar/index.vue')['default']
     TableToolbar: typeof import('./../components/BearJiaProTable/TableToolbar.vue')['default']
     TopMenu: typeof import('./../components/layout/TopMenu.vue')['default']
     WangEditor: typeof import('./../components/editor/WangEditor.vue')['default']
+    WarehousePicker: typeof import('./../components/WarehousePicker.vue')['default']
   }
 }
