@@ -18,8 +18,12 @@
       <a-button v-if="type !== 'inventory'" type="primary" ghost @click="openAdd"
         >新增{{ title }}</a-button
       >
-      <a-button v-if="type === 'receipt'" @click="openReference">参照采购订单</a-button>
-      <a-button v-if="type === 'inbound'" @click="openReference">参照送货单</a-button>
+      <a-button v-if="type === 'receipt'" type="primary" ghost @click="openReference"
+        >参照采购订单</a-button
+      >
+      <a-button v-if="type === 'inbound'" type="primary" ghost @click="openReference"
+        >参照送货单</a-button
+      >
       <a-button v-if="type !== 'inventory'" danger :disabled="!selected.length" @click="remove"
         >删除</a-button
       >
@@ -218,6 +222,44 @@
       width="1100px"
       @ok="confirmReference"
     >
+      <a-space class="reference-search">
+        <a-input
+          v-if="type === 'receipt'"
+          v-model:value="referenceQuery.orderCode"
+          placeholder="采购订单号"
+          allow-clear
+          @pressEnter="loadReference"
+        />
+        <a-input
+          v-if="type === 'receipt'"
+          v-model:value="referenceQuery.supplierName"
+          placeholder="供应商名称"
+          allow-clear
+          @pressEnter="loadReference"
+        />
+        <a-input
+          v-if="type === 'inbound'"
+          v-model:value="referenceQuery.receiptCode"
+          placeholder="到货单号"
+          allow-clear
+          @pressEnter="loadReference"
+        />
+        <a-input
+          v-if="type === 'inbound'"
+          v-model:value="referenceQuery.warehouseCode"
+          placeholder="仓库编码"
+          allow-clear
+          @pressEnter="loadReference"
+        />
+        <a-input
+          v-model:value="referenceQuery.materialCode"
+          placeholder="物料编码"
+          allow-clear
+          @pressEnter="loadReference"
+        />
+        <a-button type="primary" @click="loadReference">查询</a-button>
+        <a-button @click="resetReferenceQuery">重置</a-button>
+      </a-space>
       <a-table
         :data-source="referenceRows"
         :columns="referenceColumns"
@@ -502,6 +544,13 @@ const referenceOpen = ref(false);
 const referenceLoading = ref(false);
 const referenceRows = ref([]);
 const referenceSelected = ref([]);
+const referenceQuery = reactive({
+  orderCode: '',
+  supplierName: '',
+  receiptCode: '',
+  warehouseCode: '',
+  materialCode: '',
+});
 const inspectionOpen = ref(false);
 const inspectionReceiptId = ref();
 const inspectionLines = ref([]);
@@ -742,13 +791,26 @@ async function unapprove(record) {
   load();
 }
 async function openReference() {
-  referenceLoading.value = true;
+  Object.keys(referenceQuery).forEach((key) => (referenceQuery[key] = ''));
   referenceSelected.value = [];
+  referenceOpen.value = true;
+  await loadReference();
+}
+async function loadReference() {
+  referenceLoading.value = true;
   try {
     const result =
       type.value === 'receipt'
-        ? await listReceiptReferenceLines()
-        : await listInboundReferenceLines();
+        ? await listReceiptReferenceLines({
+            orderCode: referenceQuery.orderCode,
+            supplierName: referenceQuery.supplierName,
+            materialCode: referenceQuery.materialCode,
+          })
+        : await listInboundReferenceLines({
+            receiptCode: referenceQuery.receiptCode,
+            warehouseCode: referenceQuery.warehouseCode,
+            materialCode: referenceQuery.materialCode,
+          });
     referenceRows.value = (result.data || []).map((row, index) => ({
       ...row,
       _referenceKey:
@@ -756,10 +818,13 @@ async function openReference() {
           ? `o-${row.sourceOrderLineId}`
           : `r-${row.sourceReceiptLineId}-${index}`,
     }));
-    referenceOpen.value = true;
   } finally {
     referenceLoading.value = false;
   }
+}
+function resetReferenceQuery() {
+  Object.keys(referenceQuery).forEach((key) => (referenceQuery[key] = ''));
+  loadReference();
 }
 function confirmReference() {
   const selectedRows = referenceRows.value.filter((row) =>
@@ -853,6 +918,10 @@ onMounted(load);
 
 <style scoped>
 .search-bar {
+  margin-bottom: 16px;
+}
+.reference-search {
+  display: flex;
   margin-bottom: 16px;
 }
 </style>
