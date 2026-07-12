@@ -13,7 +13,13 @@
         <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:purchaseOrder:remove']">删除</a-button>
       </template>
       <template #bodyCell="{ column, record }">
-        <a-space v-if="column.key === 'action'">
+        <template v-if="column.key === 'status'">
+          <dict-tag :options="statusDict" :value="record.status" />
+        </template>
+        <template v-else-if="column.key === 'billType'">
+          <dict-tag :options="billTypeDict" :value="record.billType" />
+        </template>
+        <a-space v-else-if="column.key === 'action'">
           <a v-if="record.status === 'DRAFT'" v-hasPermi="['mes:purchaseOrder:edit']" @click="openEdit(record)">编辑</a>
           <a v-if="record.status === 'DRAFT'" v-hasPermi="['mes:purchaseOrder:approve']" @click="approve(record)">审核</a>
           <a v-if="record.status === 'APPROVED'" v-hasPermi="['mes:purchaseOrder:unapprove']" @click="unapprove(record)">弃审</a>
@@ -102,8 +108,12 @@
 import { reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import { useDict } from '@/composables/useDict'
 import { purchaseOrderApi, approvePurchaseOrder, unapprovePurchaseOrder } from '@/api/mes/purchase/order'
+
+const { mes_purchase_status: statusDict, mes_purchase_order_bill_type: billTypeDict } = useDict('mes_purchase_status', 'mes_purchase_order_bill_type')
 
 const proTableRef = ref()
 const formRef = ref()

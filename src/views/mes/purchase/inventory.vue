@@ -8,7 +8,10 @@
       rowKey="id"
     >
       <template #bodyCell="{ column, record }">
-        <a-space v-if="column.key === 'action'">
+        <template v-if="column.key === 'status'">
+          <dict-tag :options="inventoryStatusDict" :value="record.status" />
+        </template>
+        <a-space v-else-if="column.key === 'action'">
           <a v-hasPermi="['mes:inventoryBalance:query']" @click="openDetail(record)">详情</a>
         </a-space>
       </template>
@@ -34,7 +37,11 @@
 <script setup>
 import { ref } from 'vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import { inventoryBalanceApi } from '@/api/mes/purchase/inventory'
+
+const { mes_inventory_status: inventoryStatusDict } = useDict('mes_inventory_status')
 
 const proTableRef = ref()
 const detailOpen = ref(false)

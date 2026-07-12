@@ -14,7 +14,16 @@
         <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:purchaseReceipt:remove']">删除</a-button>
       </template>
       <template #bodyCell="{ column, record }">
-        <a-space v-if="column.key === 'action'">
+        <template v-if="column.key === 'status'">
+          <dict-tag :options="statusDict" :value="record.status" />
+        </template>
+        <template v-else-if="column.key === 'inspectionStatus'">
+          <dict-tag :options="inspectionStatusDict" :value="record.inspectionStatus" />
+        </template>
+        <template v-else-if="column.key === 'billType'">
+          <dict-tag :options="billTypeDict" :value="record.billType" />
+        </template>
+        <a-space v-else-if="column.key === 'action'">
           <a v-if="record.status === 'DRAFT'" v-hasPermi="['mes:purchaseReceipt:edit']" @click="openEdit(record)">编辑</a>
           <a v-if="record.status === 'DRAFT'" v-hasPermi="['mes:purchaseReceipt:approve']" @click="approve(record)">审核</a>
           <a v-if="record.status === 'APPROVED'" v-hasPermi="['mes:purchaseReceipt:unapprove']" @click="unapprove(record)">弃审</a>
@@ -111,10 +120,14 @@
 import { reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import {
   purchaseReceiptApi, approvePurchaseReceipt, unapprovePurchaseReceipt,
   inspectPurchaseReceipt, uninspectPurchaseReceipt, listReceiptReferenceLines,
 } from '@/api/mes/purchase/receipt'
+
+const { mes_purchase_status: statusDict, mes_receipt_inspection_status: inspectionStatusDict, mes_purchase_receipt_bill_type: billTypeDict } = useDict('mes_purchase_status', 'mes_receipt_inspection_status', 'mes_purchase_receipt_bill_type')
 
 const proTableRef = ref()
 const formRef = ref()
