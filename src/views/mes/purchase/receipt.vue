@@ -122,6 +122,7 @@ import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
 import DictTag from '@/components/DictTag/index.vue'
 import SupplierPicker from '@/components/SupplierPicker.vue'
+import WarehousePicker from '@/components/WarehousePicker.vue'
 import { useDict } from '@/composables/useDict'
 import {
   purchaseReceiptApi, approvePurchaseReceipt, unapprovePurchaseReceipt,
@@ -261,6 +262,15 @@ async function openEdit(row) {
     ...line, _key: line.id || `new-${i}`, remainingQuantity: line.receivedQuantity,
   }))
   formOpen.value = true
+}
+
+function wareLabel(line) {
+  return line.warehouseCode ? `${line.warehouseCode} ${line.warehouseName || ''}` : ''
+}
+
+function onLineWareSelect(line, w) {
+  if (w) { line.warehouseCode = w.warehouseCode; line.warehouseName = w.warehouseName }
+  else { line.warehouseCode = ''; line.warehouseName = '' }
 }
 
 async function save() {
