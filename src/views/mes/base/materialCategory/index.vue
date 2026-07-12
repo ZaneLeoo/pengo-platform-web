@@ -29,13 +29,13 @@
           rowKey="categoryId"
         >
           <template #actions="{ selectedRowKeys, selectedRows }">
-            <a-button type="primary" @click="handleAdd(selectedRows[0])" v-hasPermi="['mes:materialCategory:add']">
+            <a-button type="primary" @click="handleAdd(selectedRows[0])" v-hasPermi="['base:materialCategory:add']">
               新增
             </a-button>
-            <a-button :disabled="selectedRowKeys.length !== 1" @click="handleEdit(selectedRows[0])" v-hasPermi="['mes:materialCategory:edit']">
+            <a-button :disabled="selectedRowKeys.length !== 1" @click="handleEdit(selectedRows[0])" v-hasPermi="['base:materialCategory:edit']">
               修改
             </a-button>
-            <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:materialCategory:remove']">
+            <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['base:materialCategory:remove']">
               删除
             </a-button>
           </template>

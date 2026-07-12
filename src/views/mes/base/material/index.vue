@@ -27,10 +27,10 @@
           rowKey="materialId"
         >
           <template #actions="{ selectedRowKeys, selectedRows }">
-            <a-button type="primary" @click="handleAdd" v-hasPermi="['mes:material:add']">新增物料</a-button>
-            <a-button :disabled="selectedRowKeys.length !== 1" @click="handleEdit(selectedRows[0])" v-hasPermi="['mes:material:edit']">修改</a-button>
-            <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:material:remove']">删除</a-button>
-            <a-button @click="handleExport" v-hasPermi="['mes:material:export']">导出</a-button>
+            <a-button type="primary" @click="handleAdd" v-hasPermi="['base:material:add']">新增物料</a-button>
+            <a-button :disabled="selectedRowKeys.length !== 1" @click="handleEdit(selectedRows[0])" v-hasPermi="['base:material:edit']">修改</a-button>
+            <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['base:material:remove']">删除</a-button>
+            <a-button @click="handleExport" v-hasPermi="['base:material:export']">导出</a-button>
           </template>
         </ProTable>
       </a-col>

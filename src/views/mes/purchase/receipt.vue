@@ -44,8 +44,8 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="供应商" name="supplierName">
-              <a-input v-model:value="form.supplierName" />
+            <a-form-item label="供应商" name="supplierId">
+              <SupplierPicker v-model="form.supplierId" :label="supplierLabel" @select="onSupplierSelect" placeholder="请选择供应商" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -117,10 +117,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
 import DictTag from '@/components/DictTag/index.vue'
+import SupplierPicker from '@/components/SupplierPicker.vue'
 import { useDict } from '@/composables/useDict'
 import {
   purchaseReceiptApi, approvePurchaseReceipt, unapprovePurchaseReceipt,
@@ -145,6 +146,15 @@ const detail = ref({})
 const editLines = ref([])
 const form = reactive({})
 const refQuery = reactive({ orderCode: '', supplierName: '', materialCode: '' })
+
+const supplierLabel = computed(() =>
+  form.supplierCode ? `${form.supplierCode} ${form.supplierName}` : ''
+)
+
+function onSupplierSelect(s) {
+  if (s) { form.supplierCode = s.supplierCode; form.supplierName = s.supplierName }
+  else { form.supplierCode = ''; form.supplierName = '' }
+}
 
 const tableApi = { list: purchaseReceiptApi.list, delete: purchaseReceiptApi.remove }
 
@@ -220,7 +230,7 @@ const inspectionColumns = [
 
 const formRules = {
   receiptCode: [{ required: true, message: '请输入到货单号', trigger: 'blur' }],
-  supplierName: [{ required: true, message: '请输入供应商', trigger: 'blur' }],
+  supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
   receiptDate: [{ required: true, message: '请选择到货日期', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
   inspectionStatus: [{ required: true, message: '请选择检验状态', trigger: 'change' }],
@@ -230,7 +240,10 @@ const formRules = {
 function openAdd() {
   editing.value = false
   Object.keys(form).forEach(k => delete form[k])
-  form.receiptCode = ''; form.supplierName = ''
+  form.receiptCode = '';
+  form.supplierId = null
+  form.supplierCode = ''
+  form.supplierName = ''
   form.receiptDate = new Date().toISOString().slice(0, 10)
   form.status = 'DRAFT'; form.inspectionStatus = 'PENDING'
   form.billType = 'DIRECT'

@@ -38,8 +38,8 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="供应商" name="supplierName">
-              <a-input v-model:value="form.supplierName" />
+            <a-form-item label="供应商" name="supplierId">
+              <SupplierPicker v-model="form.supplierId" :label="supplierLabel" @select="onSupplierSelect" placeholder="请选择供应商" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -105,11 +105,12 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
 import DictTag from '@/components/DictTag/index.vue'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import SupplierPicker from '@/components/SupplierPicker.vue'
 import { useDict } from '@/composables/useDict'
 import { purchaseOrderApi, approvePurchaseOrder, unapprovePurchaseOrder } from '@/api/mes/purchase/order'
 
@@ -174,7 +175,7 @@ const editLineColumns = [
 
 const formRules = {
   orderCode: [{ required: true, message: '请输入订单编号', trigger: 'blur' }],
-  supplierName: [{ required: true, message: '请输入供应商', trigger: 'blur' }],
+  supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
   orderDate: [{ required: true, message: '请选择订单日期', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
@@ -184,6 +185,8 @@ function openAdd() {
   editing.value = false
   Object.keys(form).forEach(k => delete form[k])
   form.orderCode = ''
+  form.supplierId = null
+  form.supplierCode = ''
   form.supplierName = ''
   form.orderDate = new Date().toISOString().slice(0, 10)
   form.expectedDate = ''
@@ -196,6 +199,15 @@ function openAdd() {
 
 function openEditById(row) {
   openEdit(row)
+}
+
+const supplierLabel = computed(() =>
+  form.supplierCode ? `${form.supplierCode} ${form.supplierName}` : ''
+)
+
+function onSupplierSelect(s) {
+  if (s) { form.supplierCode = s.supplierCode; form.supplierName = s.supplierName }
+  else { form.supplierCode = ''; form.supplierName = '' }
 }
 
 async function openEdit(row) {

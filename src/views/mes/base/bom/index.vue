@@ -9,10 +9,10 @@
       rowKey="id"
     >
       <template #actions="{ selectedRowKeys, delete: deleteRows }">
-        <a-button v-hasPermi="['mes:bomMaster:add']" type="primary" @click="openAddModal">
+        <a-button v-hasPermi="['base:bomMaster:add']" type="primary" @click="openAddModal">
           <BearJiaIcon icon="plus-outlined" />新增
         </a-button>
-        <a-button v-hasPermi="['mes:bomMaster:remove']" :disabled="selectedRowKeys.length <= 0" danger type="primary" @click="() => deleteRows()">
+        <a-button v-hasPermi="['base:bomMaster:remove']" :disabled="selectedRowKeys.length <= 0" danger type="primary" @click="() => deleteRows()">
           <BearJiaIcon icon="delete-outlined" />删除
         </a-button>
       </template>
@@ -26,10 +26,10 @@
         </template>
         <template v-else-if="column.key === 'operate'">
           <a-space>
-            <a @click="openVersion(record)" v-hasPermi="['mes:bomVersion:list']">版本</a>
-            <a @click="openUpdateModal(record)" v-hasPermi="['mes:bomMaster:edit']">编辑</a>
+            <a @click="openVersion(record)" v-hasPermi="['base:bomVersion:list']">版本</a>
+            <a @click="openUpdateModal(record)" v-hasPermi="['base:bomMaster:edit']">编辑</a>
             <a-popconfirm title="确认删除?" @confirm="handleDeleteSingle(record)">
-              <a class="danger-text" v-hasPermi="['mes:bomMaster:remove']">删除</a>
+              <a class="danger-text" v-hasPermi="['base:bomMaster:remove']">删除</a>
             </a-popconfirm>
           </a-space>
         </template>

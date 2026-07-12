@@ -2,12 +2,12 @@
   <div>
     <div class="tab-actions">
       <a-space>
-        <a-button v-hasPermi="['mes:bomVersion:add']" type="primary" @click="openAddModal">
+        <a-button v-hasPermi="['base:bomVersion:add']" type="primary" @click="openAddModal">
           <BearJiaIcon icon="plus-outlined" />新增版本
         </a-button>
-        <a-button v-hasPermi="['mes:bomVersion:add']" :disabled="!selectedRowKeys.length" @click="openCopyModal">复制版本</a-button>
+        <a-button v-hasPermi="['base:bomVersion:add']" :disabled="!selectedRowKeys.length" @click="openCopyModal">复制版本</a-button>
         <a-button :disabled="tableData.length < 2" @click="openCompareModal">版本对比</a-button>
-        <a-button v-hasPermi="['mes:bomVersion:remove']" :disabled="!selectedRowKeys.length" danger @click="handleDelete">删除</a-button>
+        <a-button v-hasPermi="['base:bomVersion:remove']" :disabled="!selectedRowKeys.length" danger @click="handleDelete">删除</a-button>
       </a-space>
       <span class="count-text">共 {{ tableData.length }} 个版本</span>
     </div>
@@ -41,7 +41,7 @@
             <a-popconfirm v-if="getVersionRowActions(record).includes('freeze')" title="确认冻结该版本？冻结后不能作为默认版本。" @confirm="handleLifecycle(record, 'freeze')">
               <a>冻结</a>
             </a-popconfirm>
-            <a @click="openUpdateModal(record)" v-hasPermi="['mes:bomVersion:edit']">编辑</a>
+            <a @click="openUpdateModal(record)" v-hasPermi="['base:bomVersion:edit']">编辑</a>
             <a-popconfirm v-if="getVersionRowActions(record).includes('delete')" title="确认删除?" @confirm="handleDeleteSingle(record)">
               <a class="danger-text">删除</a>
             </a-popconfirm>

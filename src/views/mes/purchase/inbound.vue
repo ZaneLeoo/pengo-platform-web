@@ -44,8 +44,8 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="入库仓库" name="warehouseCode">
-              <a-input v-model:value="form.warehouseCode" />
+            <a-form-item label="入库仓库" name="warehouseId">
+              <WarehousePicker v-model="form.warehouseId" :label="warehouseLabel" @select="onWarehouseSelect" placeholder="请选择仓库" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -94,10 +94,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
 import DictTag from '@/components/DictTag/index.vue'
+import WarehousePicker from '@/components/WarehousePicker.vue'
 import { useDict } from '@/composables/useDict'
 import { purchaseInboundApi, approvePurchaseInbound, unapprovePurchaseInbound, listInboundReferenceLines } from '@/api/mes/purchase/inbound'
 
@@ -116,6 +117,15 @@ const detail = ref({})
 const editLines = ref([])
 const form = reactive({})
 const refQuery = reactive({ receiptCode: '', warehouseCode: '', materialCode: '' })
+
+const warehouseLabel = computed(() =>
+  form.warehouseCode ? `${form.warehouseCode} ${form.warehouseName || ''}` : ''
+)
+
+function onWarehouseSelect(w) {
+  if (w) { form.warehouseCode = w.warehouseCode; form.warehouseName = w.warehouseName }
+  else { form.warehouseCode = ''; form.warehouseName = '' }
+}
 
 const tableApi = { list: purchaseInboundApi.list, delete: purchaseInboundApi.remove }
 
@@ -173,7 +183,7 @@ const refColumns = [
 const formRules = {
   inboundCode: [{ required: true, message: '请输入入库单号', trigger: 'blur' }],
   inboundDate: [{ required: true, message: '请选择入库日期', trigger: 'change' }],
-  warehouseCode: [{ required: true, message: '请输入入库仓库', trigger: 'blur' }],
+  warehouseId: [{ required: true, message: '请选择仓库', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
@@ -182,7 +192,10 @@ function openAdd() {
   editing.value = false
   Object.keys(form).forEach(k => delete form[k])
   form.inboundCode = ''; form.inboundDate = new Date().toISOString().slice(0, 10)
-  form.warehouseCode = ''; form.status = 'DRAFT'
+  form.warehouseId = null
+  form.warehouseCode = ''
+  form.warehouseName = ''
+  form.status = 'DRAFT'
   form.billType = 'DIRECT'
   editLines.value = []
   formOpen.value = true

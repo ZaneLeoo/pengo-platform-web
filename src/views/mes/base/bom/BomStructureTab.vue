@@ -8,7 +8,7 @@
             {{ v.label }}
           </a-select-option>
         </a-select>
-        <a-button v-if="selectedVersionId" v-hasPermi="['mes:bomItem:add']" type="primary" @click="handleAddItem">
+        <a-button v-if="selectedVersionId" v-hasPermi="['base:bomItem:add']" type="primary" @click="handleAddItem">
           <BearJiaIcon icon="plus-outlined" />新增子件
         </a-button>
         <a-button v-if="selectedVersionId" @click="loadRootItems">
@@ -17,7 +17,7 @@
         <a-button v-if="selectedVersionId" :loading="expanding" @click="handleExpandBom">
           <BearJiaIcon icon="apartment-outlined" />BOM展开
         </a-button>
-        <a-button v-if="selectedVersionId" v-hasPermi="['mes:bomItem:add']" @click="handleImport">
+        <a-button v-if="selectedVersionId" v-hasPermi="['base:bomItem:add']" @click="handleImport">
           <BearJiaIcon icon="import-outlined" />AI识别导入
         </a-button>
         <a-button v-if="selectedVersionId" @click="handleCheckBom">
@@ -73,9 +73,9 @@
         <template v-else-if="column.key === 'operate'">
           <a-space>
             <a v-if="record.hasChildBom" @click.stop="handleExpandSingleBom(record)">展开</a>
-            <a @click="handleEdit(record)" v-hasPermi="['mes:bomItem:edit']">编辑</a>
+            <a @click="handleEdit(record)" v-hasPermi="['base:bomItem:edit']">编辑</a>
             <a-popconfirm title="确认删除?" @confirm="handleDeleteSingle(record)">
-              <a class="danger-text" v-hasPermi="['mes:bomItem:remove']">删除</a>
+              <a class="danger-text" v-hasPermi="['base:bomItem:remove']">删除</a>
             </a-popconfirm>
           </a-space>
         </template>
