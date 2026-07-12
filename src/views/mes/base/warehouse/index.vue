@@ -2,9 +2,9 @@
   <div>
     <ProTable ref="proTableRef" :api="tableApi" :columns="columns" :searchFields="searchFields" rowKey="id">
       <template #actions="{ selectedRowKeys, selectedRows }">
-        <a-button type="primary" @click="openAdd" v-hasPermi="['mes:warehouse:add']">新增</a-button>
-        <a-button :disabled="selectedRowKeys.length !== 1" @click="openEdit(selectedRows[0])" v-hasPermi="['mes:warehouse:edit']">修改</a-button>
-        <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['mes:warehouse:remove']">删除</a-button>
+        <a-button type="primary" @click="openAdd" v-hasPermi="['base:warehouse:add']">新增</a-button>
+        <a-button :disabled="selectedRowKeys.length !== 1" @click="openEdit(selectedRows[0])" v-hasPermi="['base:warehouse:edit']">修改</a-button>
+        <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['base:warehouse:remove']">删除</a-button>
       </template>
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'status'">
