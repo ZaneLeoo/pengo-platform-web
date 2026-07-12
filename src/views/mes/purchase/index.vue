@@ -15,16 +15,36 @@
       />
       <a-button type="primary" @click="load">查询</a-button>
       <a-button @click="reset">重置</a-button>
-      <a-button v-if="type !== 'inventory'" type="primary" ghost @click="openAdd"
+      <a-button
+        v-if="type !== 'inventory'"
+        v-hasPermi="permAdd"
+        type="primary"
+        ghost
+        @click="openAdd"
         >新增{{ title }}</a-button
       >
-      <a-button v-if="type === 'receipt'" type="primary" ghost @click="openReference"
+      <a-button
+        v-if="type === 'receipt'"
+        v-hasPermi="['mes:purchaseReceipt:reference']"
+        type="primary"
+        ghost
+        @click="openReference"
         >参照采购订单</a-button
       >
-      <a-button v-if="type === 'inbound'" type="primary" ghost @click="openReference"
+      <a-button
+        v-if="type === 'inbound'"
+        v-hasPermi="['mes:purchaseInbound:reference']"
+        type="primary"
+        ghost
+        @click="openReference"
         >参照送货单</a-button
       >
-      <a-button v-if="type !== 'inventory'" danger :disabled="!selected.length" @click="remove"
+      <a-button
+        v-if="type !== 'inventory'"
+        v-hasPermi="permRemove"
+        danger
+        :disabled="!selected.length"
+        @click="remove"
         >删除</a-button
       >
     </a-space>
@@ -40,13 +60,22 @@
     >
       <template #bodyCell="{ column, record }">
         <a-space v-if="column.key === 'action'">
-          <a v-if="type !== 'inventory' && record.status === 'DRAFT'" @click="openEdit(record)"
+          <a
+            v-if="type !== 'inventory' && record.status === 'DRAFT'"
+            v-hasPermi="permEdit"
+            @click="openEdit(record)"
             >编辑</a
           >
-          <a v-if="record.status === 'DRAFT' && type !== 'inventory'" @click="approve(record)"
+          <a
+            v-if="record.status === 'DRAFT' && type !== 'inventory'"
+            v-hasPermi="permApprove"
+            @click="approve(record)"
             >审核</a
           >
-          <a v-if="record.status === 'APPROVED' && type !== 'inventory'" @click="unapprove(record)"
+          <a
+            v-if="record.status === 'APPROVED' && type !== 'inventory'"
+            v-hasPermi="permUnapprove"
+            @click="unapprove(record)"
             >弃审</a
           >
           <a
@@ -55,6 +84,7 @@
               record.status === 'APPROVED' &&
               record.inspectionStatus === 'PENDING'
             "
+            v-hasPermi="['mes:purchaseReceipt:inspect']"
             @click="openInspection(record)"
             >质检</a
           >
@@ -64,10 +94,11 @@
               record.status === 'APPROVED' &&
               record.inspectionStatus !== 'PENDING'
             "
+            v-hasPermi="['mes:purchaseReceipt:uninspect']"
             @click="uninspect(record)"
             >反质检</a
           >
-          <a @click="openDetail(record)">详情</a>
+          <a v-hasPermi="permDetail" @click="openDetail(record)">详情</a>
         </a-space>
       </template>
     </a-table>
@@ -445,6 +476,32 @@ const configs = {
 const config = computed(() => configs[type.value]);
 const title = computed(() => config.value.title);
 const fields = computed(() => config.value.fields);
+
+// 按钮权限标志
+const permAdd = computed(() => {
+  const map = { order: 'mes:purchaseOrder:add', receipt: 'mes:purchaseReceipt:add', inbound: 'mes:purchaseInbound:add' };
+  return [map[type.value]];
+});
+const permEdit = computed(() => {
+  const map = { order: 'mes:purchaseOrder:edit', receipt: 'mes:purchaseReceipt:edit', inbound: 'mes:purchaseInbound:edit' };
+  return [map[type.value]];
+});
+const permRemove = computed(() => {
+  const map = { order: 'mes:purchaseOrder:remove', receipt: 'mes:purchaseReceipt:remove', inbound: 'mes:purchaseInbound:remove' };
+  return [map[type.value]];
+});
+const permApprove = computed(() => {
+  const map = { order: 'mes:purchaseOrder:approve', receipt: 'mes:purchaseReceipt:approve', inbound: 'mes:purchaseInbound:approve' };
+  return [map[type.value]];
+});
+const permUnapprove = computed(() => {
+  const map = { order: 'mes:purchaseOrder:unapprove', receipt: 'mes:purchaseReceipt:unapprove', inbound: 'mes:purchaseInbound:unapprove' };
+  return [map[type.value]];
+});
+const permDetail = computed(() => {
+  const map = { order: 'mes:purchaseOrder:query', receipt: 'mes:purchaseReceipt:query', inbound: 'mes:purchaseInbound:query', inventory: 'mes:inventoryBalance:query' };
+  return [map[type.value]];
+});
 const formRules = computed(() =>
   Object.fromEntries(
     fields.value
