@@ -122,19 +122,13 @@ function filterChildrenForSidebar(childrenMap, lastRouter = false) {
   var children = [];
   childrenMap.forEach((el, _index) => {
     if (el.children && el.children.length) {
-      if (el.component === 'ParentView' && !lastRouter) {
-        el.children.forEach((c) => {
-          // 对于外链，不进行路径拼接
-          if (!isExternalLink(c.path)) {
-            // 确保路径拼接时去除多余的斜杠
-            c.path = `${el.path}/${c.path}`.replace(/\/+/g, '/');
-          }
-          if (c.children && c.children.length) {
-            children = children.concat(filterChildrenForSidebar(c.children, c));
-            return;
-          }
-          children.push(c);
-        });
+      // 保留 ParentView 分组层级，不再拍平
+      if (el.component === 'ParentView') {
+        if (lastRouter) {
+          el.path = `${lastRouter.path}/${el.path}`.replace(/\/+/g, '/');
+        }
+        el.children = filterChildrenForSidebar(el.children, el);
+        children = children.concat(el);
         return;
       }
     }
