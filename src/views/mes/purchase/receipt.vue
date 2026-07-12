@@ -82,8 +82,8 @@
         <a-descriptions-item label="到货单号">{{ detail.receiptCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="供应商">{{ detail.supplierName ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="到货日期">{{ detail.receiptDate ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="状态">{{ detail.status ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="检验状态">{{ detail.inspectionStatus ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="状态"><dict-tag :options="statusDict" :value="detail.status" /></a-descriptions-item>
+        <a-descriptions-item label="检验状态"><dict-tag :options="inspectionStatusDict" :value="detail.inspectionStatus" /></a-descriptions-item>
         <a-descriptions-item label="到货总数量">{{ detail.totalQuantity ?? '-' }}</a-descriptions-item>
       </a-descriptions>
       <a-divider v-if="detail.lines">明细</a-divider>

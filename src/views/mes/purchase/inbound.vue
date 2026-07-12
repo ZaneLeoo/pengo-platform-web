@@ -71,7 +71,7 @@
         <a-descriptions-item label="入库单号">{{ detail.inboundCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="入库日期">{{ detail.inboundDate ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="入库仓库">{{ detail.warehouseCode ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="状态">{{ detail.status ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="状态"><dict-tag :options="statusDict" :value="detail.status" /></a-descriptions-item>
         <a-descriptions-item label="入库总数量">{{ detail.totalQuantity ?? '-' }}</a-descriptions-item>
       </a-descriptions>
       <a-divider v-if="detail.lines">明细</a-divider>

@@ -28,7 +28,7 @@
         <a-descriptions-item label="库存数量">{{ detail.quantity ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="可用数量">{{ detail.availableQuantity ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="锁定数量">{{ detail.lockedQuantity ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="状态">{{ detail.status ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="状态"><dict-tag :options="inventoryStatusDict" :value="detail.status" /></a-descriptions-item>
       </a-descriptions>
     </a-drawer>
   </div>

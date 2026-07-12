@@ -93,7 +93,7 @@
         <a-descriptions-item label="供应商">{{ detail.supplierName ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="订单日期">{{ detail.orderDate ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="预计到货日期">{{ detail.expectedDate ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="状态">{{ detail.status ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="状态"><dict-tag :options="statusDict" :value="detail.status" /></a-descriptions-item>
         <a-descriptions-item label="总数量">{{ detail.totalQuantity ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="总金额">{{ detail.totalAmount ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="币种">{{ detail.currency ?? '-' }}</a-descriptions-item>
