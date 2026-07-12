@@ -29,7 +29,6 @@
       </template>
     </ProTable>
 
-    <!-- 新增/编辑弹窗 -->
     <a-modal v-model:open="formOpen" :title="editing ? '编辑入库单' : '新增入库单'" width="980px" @ok="save">
       <a-form ref="formRef" :model="form" :rules="formRules" layout="vertical">
         <a-row :gutter="16">
@@ -44,11 +43,6 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="入库仓库" name="warehouseId">
-              <WarehousePicker v-model="form.warehouseId" :label="warehouseLabel" @select="onWarehouseSelect" placeholder="请选择仓库" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
             <a-form-item label="状态" name="status">
               <a-select v-model:value="form.status" :options="statusOptions" disabled />
             </a-form-item>
@@ -60,17 +54,17 @@
       <a-table :data-source="editLines" :columns="editLineColumns" row-key="_key" :pagination="false" size="small">
         <template #bodyCell="{ column, record }">
           <a-input-number v-if="column.key === 'inboundQuantity'" v-model:value="record.inboundQuantity" :min="0.000001" :max="record.remainingQuantity" style="width:100%" />
+          <WarehousePicker v-else-if="column.key === 'warehouseCode'" v-model="record.warehouseId" :label="lineWareLabel(record)" @select="(w) => onLineWareSelect(record, w)" />
+          <LocationPicker v-else-if="column.key === 'locationCode'" v-model="record.locationId" :label="lineLocLabel(record)" @select="(loc) => onLineLocSelect(record, loc)" />
           <span v-else-if="column.key === 'remainingQuantity'">{{ record.remainingQuantity }}</span>
         </template>
       </a-table>
     </a-modal>
 
-    <!-- 详情抽屉 -->
     <a-drawer v-model:open="detailOpen" title="入库单详情" width="760px">
       <a-descriptions bordered :column="1">
         <a-descriptions-item label="入库单号">{{ detail.inboundCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="入库日期">{{ detail.inboundDate ?? '-' }}</a-descriptions-item>
-        <a-descriptions-item label="入库仓库">{{ detail.warehouseCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="状态"><dict-tag :options="statusDict" :value="detail.status" /></a-descriptions-item>
         <a-descriptions-item label="入库总数量">{{ detail.totalQuantity ?? '-' }}</a-descriptions-item>
       </a-descriptions>
@@ -78,7 +72,6 @@
       <a-table v-if="detail.lines" :data-source="detail.lines" :columns="lineColumns" row-key="id" :pagination="false" size="small" />
     </a-drawer>
 
-    <!-- 参照送货单弹窗 -->
     <a-modal v-model:open="referenceOpen" title="参照送货单" width="1100px" @ok="confirmReference">
       <a-space class="mb16">
         <a-input v-model:value="refQuery.receiptCode" placeholder="到货单号" allow-clear @pressEnter="loadReference" />
@@ -99,6 +92,7 @@ import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
 import DictTag from '@/components/DictTag/index.vue'
 import WarehousePicker from '@/components/WarehousePicker.vue'
+import LocationPicker from '@/components/LocationPicker.vue'
 import { useDict } from '@/composables/useDict'
 import { purchaseInboundApi, approvePurchaseInbound, unapprovePurchaseInbound, listInboundReferenceLines } from '@/api/mes/purchase/inbound'
 
@@ -118,15 +112,6 @@ const editLines = ref([])
 const form = reactive({})
 const refQuery = reactive({ receiptCode: '', warehouseCode: '', materialCode: '' })
 
-const warehouseLabel = computed(() =>
-  form.warehouseCode ? `${form.warehouseCode} ${form.warehouseName || ''}` : ''
-)
-
-function onWarehouseSelect(w) {
-  if (w) { form.warehouseCode = w.warehouseCode; form.warehouseName = w.warehouseName }
-  else { form.warehouseCode = ''; form.warehouseName = '' }
-}
-
 const tableApi = { list: purchaseInboundApi.list, delete: purchaseInboundApi.remove }
 
 const searchFields = [
@@ -144,7 +129,6 @@ const statusOptions = [
 const columns = [
   { title: '入库单号', dataIndex: 'inboundCode', key: 'inboundCode', width: 150 },
   { title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 },
-  { title: '入库仓库', dataIndex: 'warehouseCode', key: 'warehouseCode', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '入库总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 100 },
   { title: '单据类型', dataIndex: 'billType', key: 'billType', width: 90 },
@@ -157,6 +141,7 @@ const lineColumns = [
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '入库数量', dataIndex: 'inboundQuantity' },
   { title: '仓库', dataIndex: 'warehouseCode' },
+  { title: '库位', dataIndex: 'locationCode' },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -167,7 +152,8 @@ const editLineColumns = [
   { title: '物料名称', dataIndex: 'materialName' },
   { title: '可入库数量', key: 'remainingQuantity' },
   { title: '本次入库数量', key: 'inboundQuantity', width: 150 },
-  { title: '入库仓库', dataIndex: 'warehouseCode' },
+  { title: '入库仓库', key: 'warehouseCode', width: 180 },
+  { title: '库位', key: 'locationCode', width: 150 },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -185,20 +171,32 @@ const refColumns = [
 const formRules = {
   inboundCode: [{ required: true, message: '请输入入库单号', trigger: 'blur' }],
   inboundDate: [{ required: true, message: '请选择入库日期', trigger: 'change' }],
-  warehouseId: [{ required: true, message: '请选择仓库', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
-// ==================== 新增/编辑 ====================
+function lineWareLabel(line) {
+  return line.warehouseCode ? `${line.warehouseCode} ${line.warehouseName || ''}` : ''
+}
+
+function onLineWareSelect(line, w) {
+  if (w) { line.warehouseCode = w.warehouseCode; line.warehouseName = w.warehouseName }
+  else { line.warehouseCode = ''; line.warehouseName = '' }
+}
+
+function lineLocLabel(line) {
+  return line.locationCode ? `${line.locationCode} ${line.locationName || ''}` : ''
+}
+
+function onLineLocSelect(line, loc) {
+  if (loc) { line.locationCode = loc.locationCode; line.locationName = loc.locationName }
+  else { line.locationCode = ''; line.locationName = '' }
+}
+
 function openAdd() {
   editing.value = false
   Object.keys(form).forEach(k => delete form[k])
   form.inboundCode = ''; form.inboundDate = new Date().toISOString().slice(0, 10)
-  form.warehouseId = null
-  form.warehouseCode = ''
-  form.warehouseName = ''
-  form.status = 'DRAFT'
-  form.billType = 'DIRECT'
+  form.status = 'DRAFT'; form.billType = 'DIRECT'
   editLines.value = []
   formOpen.value = true
 }
@@ -224,7 +222,7 @@ async function save() {
   if (invalid) { message.error('入库数量必须大于0且不能超过合格未入库数量'); return }
 
   const payload = { ...form }
-  payload.lines = editLines.value.map(({ _key, remainingQuantity, ...l }, i) => ({ ...l, lineNo: i + 1 }))
+  payload.lines = editLines.value.map(({ _key, remainingQuantity, warehouseId, locationId, ...l }, i) => ({ ...l, lineNo: i + 1 }))
   payload.totalQuantity = payload.lines.reduce((s, l) => s + Number(l.inboundQuantity || 0), 0)
 
   await (editing.value ? purchaseInboundApi.update(payload) : purchaseInboundApi.add(payload))
@@ -233,14 +231,12 @@ async function save() {
   proTableRef.value?.refresh()
 }
 
-// ==================== 详情 ====================
 async function openDetail(row) {
   const result = await purchaseInboundApi.get(row.id)
   detail.value = result.data || row
   detailOpen.value = true
 }
 
-// ==================== 操作 ====================
 async function handleDelete(ids) {
   await purchaseInboundApi.remove(ids.join(','))
   message.success('删除成功')
@@ -250,7 +246,6 @@ async function handleDelete(ids) {
 async function approve(r) { await approvePurchaseInbound(r.id); message.success('审核成功'); proTableRef.value?.refresh() }
 async function unapprove(r) { await unapprovePurchaseInbound(r.id); message.success('弃审成功'); proTableRef.value?.refresh() }
 
-// ==================== 参照 ====================
 async function openReference() {
   Object.keys(refQuery).forEach(k => (refQuery[k] = ''))
   refSelected.value = []
@@ -271,11 +266,7 @@ function resetRefQuery() { Object.keys(refQuery).forEach(k => (refQuery[k] = '')
 function confirmReference() {
   const selected = refRows.value.filter(r => refSelected.value.includes(r._refKey))
   if (!selected.length) { message.error('请选择至少一条来源明细'); return }
-  const warehouses = new Set(selected.map(r => r.warehouseCode))
-  if (warehouses.size > 1) { message.error('一张入库单只能参照同一仓库的送货明细'); return }
   openAdd()
-  form.warehouseCode = selected[0].warehouseCode
-  form.warehouseName = selected[0].warehouseName
   form.billType = 'RECEIPT'
   editLines.value = selected.map((row, i) => ({
     ...row, _key: row._refKey, lineNo: i + 1, inboundQuantity: row.remainingQuantity,
