@@ -71,6 +71,9 @@
         <template #bodyCell="{ column, record }">
           <a-input-number v-if="column.key === 'receivedQuantity'" v-model:value="record.receivedQuantity" :min="0.000001" :max="record.remainingQuantity" style="width:100%" />
           <WarehousePicker v-else-if="column.key === 'warehouseCode'" v-model="record.warehouseId" :label="wareLabel(record)" @select="(w) => onLineWareSelect(record, w)" />
+          <a-input v-else-if="column.key === 'lotNo'" v-model:value="record.lotNo" :placeholder="record.shelfLifeControlFlag === 'Y' ? '必填' : '选填'" />
+          <a-date-picker v-else-if="column.key === 'productionDate'" v-model:value="record.productionDate" value-format="YYYY-MM-DD" style="width:100%" @change="() => updateExpiryDate(record)" />
+          <a-date-picker v-else-if="column.key === 'expiryDate'" v-model:value="record.expiryDate" value-format="YYYY-MM-DD" style="width:100%" />
           <span v-else-if="column.key === 'remainingQuantity'">{{ record.remainingQuantity }}</span>
         </template>
       </a-table>
@@ -199,6 +202,9 @@ const lineColumns = [
   { title: '合格数量', dataIndex: 'qualifiedQuantity' },
   { title: '不合格数量', dataIndex: 'rejectedQuantity' },
   { title: '仓库', dataIndex: 'warehouseCode' },
+  { title: '批次号', dataIndex: 'lotNo' },
+  { title: '生产日期', dataIndex: 'productionDate' },
+  { title: '有效期', dataIndex: 'expiryDate' },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -209,6 +215,9 @@ const editLineColumns = [
   { title: '可到货数量', key: 'remainingQuantity' },
   { title: '本次到货数量', key: 'receivedQuantity', width: 150 },
   { title: '入库仓库', key: 'warehouseCode', width: 150 },
+  { title: '批次号', key: 'lotNo', width: 130 },
+  { title: '生产日期', key: 'productionDate', width: 150 },
+  { title: '有效期', key: 'expiryDate', width: 150 },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -282,6 +291,9 @@ async function save() {
     Number(l.receivedQuantity) <= 0 || Number(l.receivedQuantity) > Number(l.remainingQuantity)
   )
   if (invalid) { message.error('到货数量必须大于0且不能超过来源订单剩余数量'); return }
+  const invalidShelfLife = editLines.value.find(l => l.shelfLifeControlFlag === 'Y' &&
+    (!l.lotNo || (!l.productionDate && !l.expiryDate)))
+  if (invalidShelfLife) { message.error(`保质期物料 ${invalidShelfLife.materialCode} 必须填写批次号，以及生产日期或有效期`); return }
 
   const payload = { ...form }
   payload.lines = editLines.value.map(({ _key, remainingQuantity, ...l }, i) => ({ ...l, lineNo: i + 1 }))
@@ -343,6 +355,13 @@ function confirmReference() {
     qualifiedQuantity: 0, rejectedQuantity: 0, pendingQuantity: 0, inboundQuantity: 0,
   }))
   referenceOpen.value = false
+}
+
+function updateExpiryDate(line) {
+  if (!line.productionDate || !line.shelfLifeDays) return
+  const date = new Date(`${line.productionDate}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + Number(line.shelfLifeDays))
+  line.expiryDate = date.toISOString().slice(0, 10)
 }
 
 // ==================== 质检 ====================

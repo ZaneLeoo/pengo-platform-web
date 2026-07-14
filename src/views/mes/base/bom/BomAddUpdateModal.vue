@@ -13,10 +13,10 @@
         />
       </a-form-item>
       <a-form-item label="BOM类型" name="bomType">
-        <a-select v-model:value="form.bomType" placeholder="请选择BOM类型" :options="bomTypeOptions" />
+        <a-select v-model:value="form.bomType" placeholder="请选择BOM类型" :options="bomTypeDict" />
       </a-form-item>
       <a-form-item label="状态" name="status">
-        <a-select v-model:value="form.status" placeholder="请选择状态" :options="masterStatusOptions" />
+        <a-select v-model:value="form.status" placeholder="请选择状态" :options="masterStatusDict" />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -27,6 +27,7 @@ import { ref, reactive, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { getBomMaster, addBomMaster, updateBomMaster } from '@/api/mes/base'
 import MaterialPicker from '@/components/MaterialPicker.vue'
+import { useDict } from '@/composables/useDict'
 
 const emit = defineEmits(['refresh'])
 const formRef = ref()
@@ -37,18 +38,9 @@ const parentItemLabel = ref('')
 
 const form = reactive({
   bomCode: '', parentItemId: null, parentItemCode: '', parentItemName: '',
-  parentItemSpec: '', parentItemUnit: '', bomType: 'MAKE', status: 'ACTIVE'
+  parentItemSpec: '', parentItemUnit: '', bomType: 'MANUFACTURING', status: 'ENABLED'
 })
-
-const bomTypeOptions = [
-  { label: '制造BOM', value: 'MAKE' },
-  { label: '委外BOM', value: 'OUTSOURCE' },
-  { label: '采购BOM', value: 'BUY' },
-]
-const masterStatusOptions = [
-  { label: '启用', value: 'ACTIVE' },
-  { label: '停用', value: 'INACTIVE' },
-]
+const { mes_bom_type: bomTypeDict, mes_bom_master_status: masterStatusDict } = useDict('mes_bom_type', 'mes_bom_master_status')
 
 const rules = {
   bomCode: [{ required: true, message: '请输入BOM编码', trigger: 'blur' }],
@@ -60,7 +52,7 @@ const rules = {
 function resetForm() {
   Object.assign(form, {
     bomCode: '', parentItemId: null, parentItemCode: '', parentItemName: '',
-    parentItemSpec: '', parentItemUnit: '', bomType: 'MAKE', status: 'ACTIVE'
+    parentItemSpec: '', parentItemUnit: '', bomType: 'MANUFACTURING', status: 'ENABLED'
   })
   parentItemLabel.value = ''
 }

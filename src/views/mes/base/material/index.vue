@@ -32,6 +32,12 @@
             <a-button danger :disabled="!selectedRowKeys.length" @click="handleDelete(selectedRowKeys)" v-hasPermi="['base:material:remove']">删除</a-button>
             <a-button @click="handleExport" v-hasPermi="['base:material:export']">导出</a-button>
           </template>
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'materialType'"><dict-tag :options="materialTypeDict" :value="record.materialType" /></template>
+            <template v-else-if="column.key === 'sourceType'"><dict-tag :options="sourceTypeDict" :value="record.sourceType" /></template>
+            <template v-else-if="column.key === 'lotControlFlag'"><dict-tag :options="yesNoDict" :value="record.lotControlFlag" /></template>
+            <template v-else-if="column.key === 'status'"><dict-tag :options="statusDict" :value="record.status" /></template>
+          </template>
         </ProTable>
       </a-col>
     </a-row>
@@ -53,20 +59,12 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="物料类型" name="materialType">
-              <a-select v-model:value="form.materialType" placeholder="请选择">
-                <a-select-option value="RAW">原材料</a-select-option>
-                <a-select-option value="SEMI">半成品</a-select-option>
-                <a-select-option value="FINISHED">成品</a-select-option>
-              </a-select>
+              <a-select v-model:value="form.materialType" :options="materialTypeDict" placeholder="请选择" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="来源类型" name="sourceType">
-              <a-select v-model:value="form.sourceType" placeholder="请选择">
-                <a-select-option value="MAKE">自制</a-select-option>
-                <a-select-option value="PURCHASE">外购</a-select-option>
-                <a-select-option value="OUTSOURCE">委外</a-select-option>
-              </a-select>
+              <a-select v-model:value="form.sourceType" :options="sourceTypeDict" placeholder="请选择" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -99,26 +97,32 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="批次管理" name="lotControlFlag">
-              <a-select v-model:value="form.lotControlFlag" placeholder="请选择">
-                <a-select-option value="Y">是</a-select-option>
-                <a-select-option value="N">否</a-select-option>
-              </a-select>
+              <a-select v-model:value="form.lotControlFlag" :options="yesNoDict" placeholder="请选择" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="保质期管理" name="shelfLifeControlFlag">
+              <a-select v-model:value="form.shelfLifeControlFlag" :options="yesNoDict" @change="handleShelfLifeChange" />
+            </a-form-item>
+          </a-col>
+          <a-col v-if="form.shelfLifeControlFlag === 'Y'" :span="12">
+            <a-form-item label="保质期天数" name="shelfLifeDays">
+              <a-input-number v-model:value="form.shelfLifeDays" :min="1" :precision="0" style="width:100%" />
+            </a-form-item>
+          </a-col>
+          <a-col v-if="form.shelfLifeControlFlag === 'Y'" :span="12">
+            <a-form-item label="到期预警天数" name="expiryWarningDays">
+              <a-input-number v-model:value="form.expiryWarningDays" :min="0" :precision="0" style="width:100%" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="序列号管理" name="snControlFlag">
-              <a-select v-model:value="form.snControlFlag" placeholder="请选择">
-                <a-select-option value="Y">是</a-select-option>
-                <a-select-option value="N">否</a-select-option>
-              </a-select>
+              <a-select v-model:value="form.snControlFlag" :options="yesNoDict" placeholder="请选择" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="需要检验" name="inspectionFlag">
-              <a-select v-model:value="form.inspectionFlag" placeholder="请选择">
-                <a-select-option value="Y">是</a-select-option>
-                <a-select-option value="N">否</a-select-option>
-              </a-select>
+              <a-select v-model:value="form.inspectionFlag" :options="yesNoDict" placeholder="请选择" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -128,10 +132,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="状态" name="status">
-              <a-radio-group v-model:value="form.status">
-                <a-radio value="0">正常</a-radio>
-                <a-radio value="1">停用</a-radio>
-              </a-radio-group>
+              <a-radio-group v-model:value="form.status" :options="statusDict" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -144,6 +145,8 @@
 import { ref, computed, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import { listMaterial, getMaterial, addMaterial, updateMaterial, delMaterial, exportMaterial, treeSelect } from '@/api/mes/base'
 
 const proTableRef = ref()
@@ -151,15 +154,17 @@ const formRef = ref()
 const open = ref(false)
 const title = ref('')
 const submitting = ref(false)
-const form = reactive({ materialCode: '', materialName: '', materialType: 'RAW', sourceType: 'MAKE', categoryId: null, spec: '', model: '', unit: '', drawingNo: '', materialVersion: '', lotControlFlag: 'N', snControlFlag: 'N', inspectionFlag: 'N', safeStock: null, status: '0' })
+const form = reactive({ materialCode: '', materialName: '', materialType: 'RAW', sourceType: 'MAKE', categoryId: null, spec: '', model: '', unit: '', drawingNo: '', materialVersion: '', lotControlFlag: 'N', shelfLifeControlFlag: 'N', shelfLifeDays: null, expiryWarningDays: null, snControlFlag: 'N', inspectionFlag: 'N', safeStock: null, status: '0' })
 const categoryTree = ref([])
 const currentCategoryId = ref(null)
+const { mes_material_type: materialTypeDict, mes_material_source_type: sourceTypeDict, sys_yes_no: yesNoDict, sys_normal_disable: statusDict } = useDict('mes_material_type', 'mes_material_source_type', 'sys_yes_no', 'sys_normal_disable')
 
 const rules = {
   materialCode: [{ required: true, message: '请输入物料编码', trigger: 'blur' }],
   materialName: [{ required: true, message: '请输入物料名称', trigger: 'blur' }],
   sourceType: [{ required: true, message: '请选择来源类型', trigger: 'change' }],
   unit: [{ required: true, message: '请输入主单位', trigger: 'blur' }],
+  shelfLifeDays: [{ validator: () => form.shelfLifeControlFlag !== 'Y' || Number(form.shelfLifeDays) > 0 ? Promise.resolve() : Promise.reject('请输入大于0的保质期天数'), trigger: 'change' }],
 }
 
 const tableApi = { list: listMaterial, delete: delMaterial }
@@ -168,18 +173,21 @@ const initialSearchParams = { materialCode: null, materialName: null, categoryId
 const searchFields = computed(() => [
   { name: 'materialCode', label: '物料编码', type: 'input' },
   { name: 'materialName', label: '物料名称', type: 'input' },
+  { name: 'materialType', label: '物料类型', type: 'select', options: materialTypeDict.value },
+  { name: 'sourceType', label: '来源类型', type: 'select', options: sourceTypeDict.value },
+  { name: 'status', label: '状态', type: 'select', options: statusDict.value },
   { name: 'categoryId', label: '分类', type: 'input', hidden: true },
 ])
 const columns = [
   { title: '物料编码', dataIndex: 'materialCode', align: 'center', width: 120 },
   { title: '物料名称', dataIndex: 'materialName', align: 'center' },
-  { title: '物料类型', dataIndex: 'materialType', align: 'center', width: 80 },
-  { title: '来源类型', dataIndex: 'sourceType', align: 'center', width: 80 },
+  { title: '物料类型', key: 'materialType', dataIndex: 'materialType', align: 'center', width: 80 },
+  { title: '来源类型', key: 'sourceType', dataIndex: 'sourceType', align: 'center', width: 80 },
   { title: '规格', dataIndex: 'spec', align: 'center', width: 80 },
   { title: '型号', dataIndex: 'model', align: 'center', width: 80 },
   { title: '单位', dataIndex: 'unit', align: 'center', width: 60 },
-  { title: '批次', dataIndex: 'lotControlFlag', align: 'center', width: 60 },
-  { title: '状态', dataIndex: 'status', align: 'center', width: 60 },
+  { title: '批次', key: 'lotControlFlag', dataIndex: 'lotControlFlag', align: 'center', width: 60 },
+  { title: '状态', key: 'status', dataIndex: 'status', align: 'center', width: 60 },
   { title: '创建时间', dataIndex: 'createTime', align: 'center', width: 150 },
 ]
 
@@ -196,8 +204,18 @@ function handleTreeSelect(keys) {
 }
 
 function handleAdd() {
-  Object.assign(form, { materialId: null, materialCode: '', materialName: '', materialType: 'RAW', sourceType: 'MAKE', categoryId: currentCategoryId.value || null, spec: '', model: '', unit: '', drawingNo: '', materialVersion: '', lotControlFlag: 'N', snControlFlag: 'N', inspectionFlag: 'N', safeStock: null, status: '0' })
+  Object.assign(form, { materialId: null, materialCode: '', materialName: '', materialType: 'RAW', sourceType: 'MAKE', categoryId: currentCategoryId.value || null, spec: '', model: '', unit: '', drawingNo: '', materialVersion: '', lotControlFlag: 'N', shelfLifeControlFlag: 'N', shelfLifeDays: null, expiryWarningDays: null, snControlFlag: 'N', inspectionFlag: 'N', safeStock: null, status: '0' })
   title.value = '新增物料'; open.value = true
+}
+
+function handleShelfLifeChange(value) {
+  if (value === 'Y') {
+    form.lotControlFlag = 'Y'
+    form.expiryWarningDays ??= 30
+  } else {
+    form.shelfLifeDays = null
+    form.expiryWarningDays = null
+  }
 }
 
 function handleEdit(row) {

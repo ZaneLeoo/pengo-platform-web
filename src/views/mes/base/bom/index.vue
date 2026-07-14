@@ -19,10 +19,10 @@
 
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'bomType'">
-          <a-tag :color="bomTypeMap[record.bomType]?.color">{{ bomTypeMap[record.bomType]?.label || record.bomType }}</a-tag>
+          <dict-tag :options="bomTypeDict" :value="record.bomType" />
         </template>
         <template v-else-if="column.key === 'status'">
-          <a-tag :color="record.status === 'ACTIVE' ? 'green' : 'default'">{{ record.status === 'ACTIVE' ? '启用' : '停用' }}</a-tag>
+          <dict-tag :options="masterStatusDict" :value="record.status" />
         </template>
         <template v-else-if="column.key === 'operate'">
           <a-space>
@@ -46,6 +46,8 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { listBomMaster, delBomMaster } from '@/api/mes/base'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import BomAddUpdateModal from './BomAddUpdateModal.vue'
 import { BearJiaIcon } from '@/utils/BearJiaIcon.js'
 
@@ -53,11 +55,7 @@ const router = useRouter()
 const proTableRef = ref()
 const addUpdateModalRef = ref()
 
-const bomTypeMap = {
-  MAKE: { label: '制造', color: 'blue' },
-  OUTSOURCE: { label: '委外', color: 'orange' },
-  BUY: { label: '采购', color: 'purple' },
-}
+const { mes_bom_type: bomTypeDict, mes_bom_master_status: masterStatusDict } = useDict('mes_bom_type', 'mes_bom_master_status')
 
 const tableApi = { list: listBomMaster, delete: (ids) => delBomMaster(ids.join(',')) }
 const initialSearchParams = { parentItemCode: null, bomCode: null, bomType: null, status: null }
@@ -65,12 +63,8 @@ const initialSearchParams = { parentItemCode: null, bomCode: null, bomType: null
 const searchFields = computed(() => [
   { name: 'parentItemCode', label: '母件编码', type: 'input' },
   { name: 'bomCode', label: 'BOM编码', type: 'input' },
-  { name: 'bomType', label: 'BOM类型', type: 'select', options: [
-    { label: '制造', value: 'MAKE' }, { label: '委外', value: 'OUTSOURCE' }, { label: '采购', value: 'BUY' }
-  ]},
-  { name: 'status', label: '状态', type: 'select', options: [
-    { label: '启用', value: 'ACTIVE' }, { label: '停用', value: 'INACTIVE' }
-  ]},
+  { name: 'bomType', label: 'BOM类型', type: 'select', options: bomTypeDict.value },
+  { name: 'status', label: '状态', type: 'select', options: masterStatusDict.value },
 ])
 
 const columns = [

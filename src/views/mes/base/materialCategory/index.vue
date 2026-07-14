@@ -39,6 +39,11 @@
               删除
             </a-button>
           </template>
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'status'">
+              <dict-tag :options="statusDict" :value="record.status" />
+            </template>
+          </template>
         </ProTable>
       </a-col>
     </a-row>
@@ -60,8 +65,9 @@
         </a-form-item>
         <a-form-item label="状态" name="status">
           <a-radio-group v-model:value="form.status">
-            <a-radio value="0">正常</a-radio>
-            <a-radio value="1">停用</a-radio>
+            <a-radio v-for="item in statusDict" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </a-radio>
           </a-radio-group>
         </a-form-item>
       </a-form>
@@ -73,6 +79,8 @@
 import { ref, computed, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 import ProTable from '@/components/BearJiaProTable/index.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import { listCategory, getCategory, addCategory, updateCategory, delCategory, treeSelect } from '@/api/mes/base'
 
 const proTableRef = ref()
@@ -83,23 +91,25 @@ const submitting = ref(false)
 const form = reactive({ parentId: null, categoryCode: '', categoryName: '', orderNum: 0, status: '0' })
 const categoryTree = ref([])
 const currentParentId = ref(null)
+const { sys_normal_disable: statusDict } = useDict('sys_normal_disable')
 
 const rules = {
   categoryCode: [{ required: true, message: '请输入分类编码', trigger: 'blur' }],
   categoryName: [{ required: true, message: '请输入分类名称', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
 const tableApi = { list: listCategory, delete: delCategory }
 const initialSearchParams = { categoryName: null, status: null }
 const searchFields = computed(() => [
   { name: 'categoryName', label: '分类名称', type: 'input' },
-  { name: 'status', label: '状态', type: 'select', options: [{ label: '正常', value: '0' }, { label: '停用', value: '1' }] },
+  { name: 'status', label: '状态', type: 'select', options: statusDict.value },
 ])
 const columns = [
   { title: '分类编码', dataIndex: 'categoryCode', align: 'center' },
   { title: '分类名称', dataIndex: 'categoryName', align: 'center' },
   { title: '排序', dataIndex: 'orderNum', align: 'center', width: 80 },
-  { title: '状态', dataIndex: 'status', align: 'center', width: 80 },
+  { title: '状态', dataIndex: 'status', key: 'status', align: 'center', width: 80 },
   { title: '创建时间', dataIndex: 'createTime', align: 'center', width: 160 },
 ]
 

@@ -11,6 +11,9 @@
         <template v-if="column.key === 'status'">
           <dict-tag :options="inventoryStatusDict" :value="record.status" />
         </template>
+        <template v-else-if="column.key === 'expiryStatus'">
+          <a-tag :color="expiryColor(record.expiryStatus)">{{ expiryLabel(record.expiryStatus) }}</a-tag>
+        </template>
         <a-space v-else-if="column.key === 'action'">
           <a v-hasPermi="['mes:inventoryBalance:query']" @click="openDetail(record)">详情</a>
         </a-space>
@@ -24,6 +27,9 @@
         <a-descriptions-item label="仓库编码">{{ detail.warehouseCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="库位编码">{{ detail.locationCode ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="批次号">{{ detail.lotNo ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="生产日期">{{ detail.productionDate ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="有效期">{{ detail.expiryDate ?? '-' }}</a-descriptions-item>
+        <a-descriptions-item label="效期状态"><a-tag :color="expiryColor(detail.expiryStatus)">{{ expiryLabel(detail.expiryStatus) }}</a-tag></a-descriptions-item>
         <a-descriptions-item label="单位">{{ detail.unit ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="库存数量">{{ detail.quantity ?? '-' }}</a-descriptions-item>
         <a-descriptions-item label="可用数量">{{ detail.availableQuantity ?? '-' }}</a-descriptions-item>
@@ -60,6 +66,8 @@ const columns = [
   { title: '仓库编码', dataIndex: 'warehouseCode', key: 'warehouseCode', width: 120 },
   { title: '库位编码', dataIndex: 'locationCode', key: 'locationCode', width: 120 },
   { title: '批次号', dataIndex: 'lotNo', key: 'lotNo', width: 100 },
+  { title: '有效期', dataIndex: 'expiryDate', key: 'expiryDate', width: 110 },
+  { title: '效期状态', dataIndex: 'expiryStatus', key: 'expiryStatus', width: 90 },
   { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
   { title: '库存数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
   { title: '可用数量', dataIndex: 'availableQuantity', key: 'availableQuantity', width: 100 },
@@ -72,5 +80,13 @@ async function openDetail(row) {
   const result = await inventoryBalanceApi.get(row.id)
   detail.value = result.data || row
   detailOpen.value = true
+}
+
+function expiryLabel(status) {
+  return { UNMANAGED: '未管理', VALID: '正常', EXPIRING: '临期', EXPIRED: '已过期' }[status] || '未管理'
+}
+
+function expiryColor(status) {
+  return { VALID: 'green', EXPIRING: 'orange', EXPIRED: 'red' }[status] || 'default'
 }
 </script>

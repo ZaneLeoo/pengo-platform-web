@@ -8,8 +8,8 @@
         <a-divider type="vertical" />
         <span class="header-title">BOM详情</span>
         <span class="header-info" v-if="master.bomCode">— {{ master.bomCode }} / {{ master.parentItemName }}</span>
-        <a-tag v-if="master.bomType" :color="typeColor[master.bomType]">{{ typeLabel[master.bomType] }}</a-tag>
-        <a-tag v-if="master.status" :color="master.status === 'ACTIVE' ? 'green' : 'default'">{{ master.status === 'ACTIVE' ? '启用' : '停用' }}</a-tag>
+        <dict-tag v-if="master.bomType" :options="bomTypeDict" :value="master.bomType" />
+        <dict-tag v-if="master.status" :options="masterStatusDict" :value="master.status" />
       </a-space>
     </div>
 
@@ -22,12 +22,12 @@
           <a-descriptions-item label="母件规格">{{ master.parentItemSpec || '-' }}</a-descriptions-item>
           <a-descriptions-item label="母件单位">{{ master.parentItemUnit || '-' }}</a-descriptions-item>
           <a-descriptions-item label="BOM类型">
-            <a-tag :color="typeColor[master.bomType]">{{ typeLabel[master.bomType] || master.bomType }}</a-tag>
+            <dict-tag :options="bomTypeDict" :value="master.bomType" />
           </a-descriptions-item>
           <a-descriptions-item label="状态">
-            <a-tag :color="master.status === 'ACTIVE' ? 'green' : 'default'">{{ master.status === 'ACTIVE' ? '启用' : '停用' }}</a-tag>
+            <dict-tag :options="masterStatusDict" :value="master.status" />
           </a-descriptions-item>
-          <a-descriptions-item label="来源系统">{{ master.sourceSystem || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="来源系统"><dict-tag :options="sourceSystemDict" :value="master.sourceSystem" /></a-descriptions-item>
           <a-descriptions-item label="创建人">{{ master.createBy || '-' }}</a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ master.createTime || '-' }}</a-descriptions-item>
           <a-descriptions-item label="更新人">{{ master.updateBy || '-' }}</a-descriptions-item>
@@ -57,6 +57,8 @@ import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { getBomMaster } from '@/api/mes/base'
 import BomVersionTab from './BomVersionTab.vue'
 import BomStructureTab from './BomStructureTab.vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,8 +69,7 @@ const master = reactive({})
 const versionTabRef = ref()
 const structureTabRef = ref()
 
-const typeLabel = { MAKE: '制造', OUTSOURCE: '委外', BUY: '采购' }
-const typeColor = { MAKE: 'blue', OUTSOURCE: 'orange', BUY: 'purple' }
+const { mes_bom_type: bomTypeDict, mes_bom_master_status: masterStatusDict, mes_source_system: sourceSystemDict } = useDict('mes_bom_type', 'mes_bom_master_status', 'mes_source_system')
 
 onMounted(() => {
   getBomMaster(bomMasterId.value).then(res => {

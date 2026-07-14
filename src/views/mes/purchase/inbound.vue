@@ -142,6 +142,9 @@ const lineColumns = [
   { title: '入库数量', dataIndex: 'inboundQuantity' },
   { title: '仓库', dataIndex: 'warehouseCode' },
   { title: '库位', dataIndex: 'locationCode' },
+  { title: '批次号', dataIndex: 'lotNo' },
+  { title: '生产日期', dataIndex: 'productionDate' },
+  { title: '有效期', dataIndex: 'expiryDate' },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -154,6 +157,9 @@ const editLineColumns = [
   { title: '本次入库数量', key: 'inboundQuantity', width: 150 },
   { title: '入库仓库', key: 'warehouseCode', width: 180 },
   { title: '库位', key: 'locationCode', width: 150 },
+  { title: '批次号', dataIndex: 'lotNo', width: 120 },
+  { title: '生产日期', dataIndex: 'productionDate', width: 120 },
+  { title: '有效期', dataIndex: 'expiryDate', width: 120 },
   { title: '单位', dataIndex: 'unit' },
 ]
 
@@ -165,6 +171,8 @@ const refColumns = [
   { title: '剩余可入库', dataIndex: 'remainingQuantity' },
   { title: '入库仓库', dataIndex: 'warehouseCode' },
   { title: '库位', dataIndex: 'locationCode' },
+  { title: '批次号', dataIndex: 'lotNo' },
+  { title: '有效期', dataIndex: 'expiryDate' },
   { title: '单位', dataIndex: 'unit' },
 ]
 

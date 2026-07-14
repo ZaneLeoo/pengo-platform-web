@@ -27,10 +27,10 @@
           <span v-else>-</span>
         </template>
         <template v-else-if="column.key === 'status'">
-          <a-tag :color="statusColor[record.status]">{{ statusLabel[record.status] || record.status }}</a-tag>
+          <dict-tag :options="versionStatusDict" :value="record.status" />
         </template>
         <template v-else-if="column.key === 'approveStatus'">
-          <a-tag :color="approveColor[record.approveStatus]">{{ approveLabel[record.approveStatus] || record.approveStatus }}</a-tag>
+          <dict-tag :options="approveStatusDict" :value="record.approveStatus" />
         </template>
         <template v-else-if="column.key === 'operate'">
           <a-space>
@@ -93,6 +93,8 @@ import BomVersionAddUpdateModal from './BomVersionAddUpdateModal.vue'
 import { BearJiaIcon } from '@/utils/BearJiaIcon.js'
 import { getVersionActionPayload, getVersionRowActions } from './bomVersionActions.js'
 import { buildBomVersionCompareSummary } from './bomVersionCompareSummary.js'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 
 const props = defineProps({ bomMasterId: { type: Number, required: true } })
 
@@ -105,10 +107,7 @@ const compareLoading = ref(false)
 const compareResult = ref(null)
 const compareForm = reactive({ baseVersionId: null, targetVersionId: null })
 
-const statusLabel = { DRAFT: '草稿', EFFECTIVE: '生效', FROZEN: '冻结' }
-const statusColor = { DRAFT: 'default', EFFECTIVE: 'green', FROZEN: 'orange' }
-const approveLabel = { PENDING: '待审批', APPROVED: '已审批', REJECTED: '驳回' }
-const approveColor = { PENDING: 'processing', APPROVED: 'green', REJECTED: 'red' }
+const { mes_bom_version_status: versionStatusDict, mes_bom_approve_status: approveStatusDict } = useDict('mes_bom_version_status', 'mes_bom_approve_status')
 const diffLabel = { ADD: '新增', DELETE: '删除', CHANGE: '变更' }
 const diffColor = { ADD: 'green', DELETE: 'red', CHANGE: 'blue' }
 

@@ -14,7 +14,7 @@
         <a-input-number v-model:value="form.baseQty" :min="0" :precision="2" style="width:100%" />
       </a-form-item>
       <a-form-item label="用途" name="usageType">
-        <a-select v-model:value="form.usageType" placeholder="请选择用途" :options="usageTypeOptions" />
+        <a-select v-model:value="form.usageType" placeholder="请选择用途" :options="usageTypeDict" />
       </a-form-item>
       <a-form-item label="生效日期">
         <a-date-picker v-model:value="form.effectiveDate" value-format="YYYY-MM-DD" style="width:100%" />
@@ -23,10 +23,10 @@
         <a-date-picker v-model:value="form.expireDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
       <a-form-item label="版本状态" name="status">
-        <a-select v-model:value="form.status" placeholder="请选择版本状态" :options="statusOptions" />
+        <a-select v-model:value="form.status" placeholder="请选择版本状态" :options="versionStatusDict" />
       </a-form-item>
       <a-form-item label="审批状态" name="approveStatus">
-        <a-select v-model:value="form.approveStatus" placeholder="请选择审批状态" :options="approveStatusOptions" />
+        <a-select v-model:value="form.approveStatus" placeholder="请选择审批状态" :options="approveStatusDict" />
       </a-form-item>
       <a-form-item label="设为默认">
         <a-switch v-model:checked="form.defaultFlag" :checked-value="1" :un-checked-value="0" />
@@ -40,6 +40,7 @@ import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 import { getBomVersion, addBomVersion, updateBomVersion, copyBomVersion } from '@/api/mes/base'
 import { submitBomVersionForm } from './bomVersionSubmit.js'
+import { useDict } from '@/composables/useDict'
 
 const emit = defineEmits(['refresh'])
 const props = defineProps({ bomMasterId: { type: Number, required: true } })
@@ -52,20 +53,12 @@ const isCopy = ref(false)
 
 const form = reactive({
   versionCode: '', versionName: '', versionDesc: '', baseQty: 1,
-  usageType: 'PRODUCTION', effectiveDate: null, expireDate: null,
+  usageType: 'GENERAL', effectiveDate: null, expireDate: null,
   status: 'DRAFT', approveStatus: 'PENDING', defaultFlag: 0, bomMasterId: props.bomMasterId,
   sourceVersionId: null
 })
 
-const usageTypeOptions = [
-  { label: '生产', value: 'PRODUCTION' }, { label: '试制', value: 'TRIAL' }, { label: '维修', value: 'REPAIR' }
-]
-const statusOptions = [
-  { label: '草稿', value: 'DRAFT' }, { label: '生效', value: 'EFFECTIVE' }, { label: '冻结', value: 'FROZEN' }
-]
-const approveStatusOptions = [
-  { label: '待审批', value: 'PENDING' }, { label: '已审批', value: 'APPROVED' }, { label: '驳回', value: 'REJECTED' }
-]
+const { mes_bom_usage_type: usageTypeDict, mes_bom_version_status: versionStatusDict, mes_bom_approve_status: approveStatusDict } = useDict('mes_bom_usage_type', 'mes_bom_version_status', 'mes_bom_approve_status')
 
 const rules = {
   versionCode: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
@@ -78,7 +71,7 @@ const rules = {
 function resetForm() {
   Object.assign(form, {
     versionCode: '', versionName: '', versionDesc: '', baseQty: 1,
-    usageType: 'PRODUCTION', effectiveDate: null, expireDate: null,
+    usageType: 'GENERAL', effectiveDate: null, expireDate: null,
     status: 'DRAFT', approveStatus: 'PENDING', defaultFlag: 0, bomMasterId: props.bomMasterId,
     sourceVersionId: null
   })

@@ -68,7 +68,7 @@
                 />
               </template>
               <template v-else-if="column.key === 'materialType'">
-                <a-tag>{{ materialTypeLabel[record.materialType] || record.materialType }}</a-tag>
+                <dict-tag :options="materialTypeDict" :value="record.materialType" />
               </template>
             </template>
           </a-table>
@@ -85,6 +85,8 @@
 <script setup>
 import { ref, reactive, watch, nextTick, computed } from 'vue'
 import { SearchOutlined, CloseCircleFilled } from '@ant-design/icons-vue'
+import DictTag from '@/components/DictTag/index.vue'
+import { useDict } from '@/composables/useDict'
 import { listMaterial, treeSelect } from '@/api/mes/base'
 
 const props = defineProps({
@@ -114,7 +116,7 @@ const pagination = reactive({
   showSizeChanger: false,
 })
 
-const materialTypeLabel = { RAW: '原材料', SEMI: '半成品', FINISHED: '成品' }
+const { mes_material_type: materialTypeDict } = useDict('mes_material_type')
 
 const columnWidths = ref({})
 
